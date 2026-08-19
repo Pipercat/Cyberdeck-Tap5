@@ -95,3 +95,7 @@ idf.py -p /dev/cu.usbXXXXX flash monitor
 Siehe Implementierungsplan (`/Users/marvin/.claude/plans/proud-hatching-spring.md`):
 Kamera (zurueckgestellt, siehe oben), Phase 4 (Server/Netzwerk), Phase 5
 (Flashing externer ESP32-Boards), Phase 6 (Projects/Testsequenzen/Diagnostics).
+
+## Push-Test
+
+✅ GitHub-Push von ChatGPT erfolgreich getestet am **19.08.2026**.
