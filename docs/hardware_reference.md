@@ -134,6 +134,38 @@ I2S-Konfiguration und Codec-Init 1:1 aus der M5Stack-Werksfirmware uebernommen
   Projekt integriert wird - deutlich schneller iterierbar als im vollen App-
   Kontext.
 
+## Wi-Fi-Bring-up (Phase 4, auf echter Hardware geflasht und verifiziert 2026-08-19)
+
+- Das Wi-Fi-Radio sitzt NICHT auf dem ESP32-P4, sondern auf dem separaten
+  ESP32-C6-MINI-1U-Co-Prozessor, angebunden per SDIO2. Architektur (esp_hosted
+  + esp_wifi_remote, transparenter `esp_wifi.h`-Ersatz) und exakte Pin-/
+  Kconfig-Werte stammen aus der generierten `sdkconfig` der offiziellen
+  M5Tab5-UserDemo-Werksfirmware (`platforms/tab5/`), nicht geraten - siehe
+  `components/core/network/idf_component.yml` (Versionen exakt gepinnt:
+  `esp_hosted 1.4.0`, `esp_wifi_remote 0.8.5`) und `sdkconfig.defaults`.
+- **Auf echter Hardware verifiziert**: `wifi_module_init()` (STA-Modus) laeuft
+  sauber durch - SDIO-Handshake mit dem C6 (GPIO12 CLK/13 CMD/11 D0/10 D1/9
+  D2/8 D3, GPIO15 Reset, 4-Bit-Bus, 40MHz) dauert ca. 2.3s, danach
+  `wifi_module_init() -> ESP_OK`, kein Hang, Boot laeuft normal bis zum
+  Dashboard weiter. Der C6 hatte bereits werkseitig eine ESP-Hosted-
+  Slave-Firmware geladen (Boot-Log: "Received INIT event from ESP32
+  peripheral", Capabilities inkl. WLAN + BLE via HCI-over-SDIO) - auf diesem
+  konkreten Geraet musste also KEIN separates C6-Firmware-Image geflasht
+  werden (anders als in der M5Tab5-UserDemo-Doku als moeglicher Schritt
+  beschrieben, siehe `platforms/tab5/wifi_c6_fw/flash.sh` dort).
+- **Bewusst lazy statt beim Boot**: `wifi_module_init()` wird erst beim ersten
+  Oeffnen des Network-Screens aufgerufen (`network_on_show()`), nicht in
+  `app_main()` - SDIO-Bring-up zu einem zweiten Chip ist eine nicht-triviale
+  Hardware-Operation, die nicht bei jedem Boot noetig ist, wenn der Nutzer
+  Wi-Fi gar nicht braucht. Kurzzeitig testweise eager (in `app_main()`)
+  aufgerufen, um genau dieses Boot-Log auf echter Hardware zu erfassen, dann
+  wieder auf lazy zurueckgesetzt.
+- **Nicht implementiert**: Passwort-Persistierung. `settings_t.wifi_ssid` wird
+  nach erfolgreicher Verbindung gespeichert (Komfort: Feld vorausgefuellt),
+  das Passwort bewusst nicht - NVS-Verschluesselung ist noch nicht aktiviert
+  (siehe `settings.h`-Kommentar), ein Klartext-Passwort in der Settings-Blob
+  waere unsicher. Muss nach jedem Boot neu eingegeben werden.
+
 ## Nicht verifizierte/gesperrte Bereiche (bewusst, siehe pin_table.h)
 
 - **GPIO_EXT-Header**: keine Pinbelegung in verfuegbaren Quellen gefunden.

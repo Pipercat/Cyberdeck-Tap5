@@ -14,6 +14,8 @@
 #include "system_module_ui.h"
 #include "audio_module_ui.h"
 #include "settings_module_ui.h"
+#include "network_module_ui.h"
+#include "wifi_module.h"
 #include "statusbar.h"
 #include "esp_lvgl_port.h"
 
@@ -21,10 +23,13 @@ static const char *TAG = "main";
 
 #define LOG_SINK_CAPACITY_BYTES (32 * 1024)
 
-// Speist die persistente Statusleiste mit echten Werten (RAM/Akku), soweit
-// bereits verfuegbar (siehe system_module.c). Wi-Fi/Server/USB-Target/SD
-// bleiben "--", bis die jeweiligen Module (Phase 4/5) existieren - bewusst
-// keine erfundenen Platzhalterwerte.
+// Speist die persistente Statusleiste mit echten Werten (RAM/Akku/Wi-Fi),
+// soweit bereits verfuegbar. Server/USB-Target/SD bleiben "--", bis die
+// jeweiligen Module (Phase 5) existieren - bewusst keine erfundenen
+// Platzhalterwerte. Wi-Fi bleibt "--", bis der Nutzer den Network-Screen
+// mindestens einmal geoeffnet hat (wifi_module_init() laeuft dort bewusst
+// lazy, nicht beim Boot - SDIO-Bring-up zum C6 ist eine potenziell riskante
+// Hardware-Operation, siehe docs/hardware_reference.md).
 static void statusbar_refresh_timer_cb(lv_timer_t *timer)
 {
     (void)timer;
@@ -36,6 +41,7 @@ static void statusbar_refresh_timer_cb(lv_timer_t *timer)
         ? (uint8_t)((100 * (stats.heap_total_bytes - stats.heap_free_bytes)) / stats.heap_total_bytes) : 0;
     statusbar_set_ram_percent(ram_pct);
     statusbar_set_battery_voltage(stats.battery_voltage_v, stats.battery_voltage_v >= 0.0f);
+    statusbar_set_wifi(wifi_module_get_rssi(), wifi_module_get_state() == WIFI_MODULE_STATE_CONNECTED);
 }
 
 void app_main(void)
@@ -65,6 +71,7 @@ void app_main(void)
     system_module_ui_register();
     audio_module_ui_register();
     settings_module_ui_register();
+    network_module_ui_register();
     nav_show(NAV_SCREEN_DASHBOARD);
     lv_timer_create(statusbar_refresh_timer_cb, 3000, NULL);
     lvgl_port_unlock();

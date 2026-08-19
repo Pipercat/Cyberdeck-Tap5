@@ -1,0 +1,11 @@
+## Wi-Fi auf dem Tab5 laeuft NICHT auf dem Haupt-SoC (ESP32-P4) - das Funkmodul
+## sitzt auf dem separaten ESP32-C6-MINI-1U-Co-Prozessor, angebunden ueber
+## SDIO2 (GPIO 8-13, 15). Verifiziert gegen die offizielle M5Tab5-UserDemo-
+## Firmware (platforms/tab5/main/idf_component.yml + generierte sdkconfig):
+## esp_wifi_remote bietet einen transparenten esp_wifi.h-Ersatz, der ueber
+## esp_hosted per SDIO mit dem C6 spricht. Versionen exakt wie im Referenz-
+## Repo gepinnt (nicht geraten) - siehe docs/hardware_reference.md.
+dependencies:
+  espressif/esp_hosted: "1.4.0"
+  espressif/esp_wifi_remote: "0.8.5"
+  idf: ">=5.3"

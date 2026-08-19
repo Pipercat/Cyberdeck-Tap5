@@ -28,7 +28,7 @@ static const module_entry_t k_modules[] = {
     { LV_SYMBOL_EYE_OPEN, "Sensors",     NAV_SCREEN_SENSORS, false },
     { LV_SYMBOL_VIDEO,    "Camera",      NAV_SCREEN_CAMERA,  false },
     { LV_SYMBOL_VOLUME_MAX,"Audio",      NAV_SCREEN_AUDIO,   true  },
-    { LV_SYMBOL_WIFI,     "Network",     NAV_SCREEN_NETWORK, false },
+    { LV_SYMBOL_WIFI,     "Network",     NAV_SCREEN_NETWORK, true  },
     { LV_SYMBOL_DIRECTORY,"Files",       NAV_SCREEN_FILES,   false },
     { LV_SYMBOL_COPY,     "Projects",    NAV_SCREEN_PROJECTS,false },
     { LV_SYMBOL_SETTINGS, "System",      NAV_SCREEN_SYSTEM,  true  },
