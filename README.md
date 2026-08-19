@@ -50,6 +50,12 @@ mit dem C6 funktioniert, ~2.3s, kein Hang). Details und Boot-Log-Auszug in
 `docs/hardware_reference.md`. Passwoerter werden bewusst nicht persistiert
 (NVS-Verschluesselung ist noch nicht aktiviert).
 
+Phase 6 (bisher): **Quick Actions** (Sprungleiste auf dem Dashboard zu
+Serial/GPIO/I2C/Audio/Network), **Self-Test** um einen Wi-Fi/C6-Link-Check
+erweitert, **Sensors** (RTC RX8130CE - echtes Register-Readout; IMU BMI270
+bewusst nicht implementiert, siehe `docs/hardware_reference.md` fuer die
+Begruendung - braucht einen ~30k-Zeilen-Firmware-Blob-Upload).
+
 Auf dem angeschlossenen Geraet erfolgreich geflasht und gebootet: Panel-Typ
 ST7121 automatisch erkannt, Touch aktiv, Dashboard und alle Phase-2/3-Module
 laufen ohne Absturz. Display laeuft in physischer Portrait-Ausrichtung
@@ -89,9 +95,9 @@ idf.py -p /dev/cu.usbXXXXX flash monitor
 
 - Display zeigt das Dashboard (Portrait, 720x1280) mit Statusleiste oben
   (Platzhalterwerte) und einem dynamischen Kachel-Grid, Backlight an (80%).
-- Touch auf GPIO/PWM/ADC/I2C Scanner/Serial/System/Audio/Network/Settings
-  oeffnet das jeweils funktionsfaehige Modul; die restlichen Kacheln (Flash,
-  SPI, Sensors, Camera, Files, Projects) zeigen weiterhin "Coming Soon".
+- Touch auf GPIO/PWM/ADC/I2C Scanner/Serial/System/Audio/Network/Settings/
+  Sensors oeffnet das jeweils funktionsfaehige Modul; die restlichen Kacheln
+  (Flash, SPI, Camera, Files, Projects) zeigen weiterhin "Coming Soon".
 
 **Bekannte offene Punkte:**
 - Geraete mit dem aelteren ILI9881C+GT911-Panel ("Gen1", vor ca. Oktober 2025)
