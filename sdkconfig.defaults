@@ -1,0 +1,47 @@
+# CyberDeck Tab5 - Basis-Konfiguration
+# Ziel: idf.py set-target esp32p4
+
+# --- PSRAM (32MB Octal, laut docs.m5stack.com/en/core/Tab5) ---
+# ESP32-P4-Kconfig kennt nur "SPIRAM_MODE_HEX" als Auswahl-Item; Octal-PSRAM
+# wird darunter per SPIRAM_USE_8LINE_MODE aktiviert (siehe
+# components/esp_psram/esp32p4/Kconfig.spiram in ESP-IDF v5.4.1).
+# 200MHz PSRAM-Takt ist auf echter Hardware VERIFIZIERT ERFORDERLICH, nicht
+# nur "nice to have": bei 20MHz (Default) kommt das DPI/MIPI-Display nicht
+# hinterher, echte Fehlermeldung "can't fetch data from external memory
+# fast enough, underrun happens". Bestaetigt durch M5Stacks eigene
+# Werksfirmware (M5Tab5-UserDemo/platforms/tab5/sdkconfig.defaults), die
+# ebenfalls CONFIG_SPIRAM_SPEED_200M + CONFIG_IDF_EXPERIMENTAL_FEATURES nutzt.
+CONFIG_IDF_EXPERIMENTAL_FEATURES=y
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_HEX=y
+CONFIG_SPIRAM_USE_8LINE_MODE=y
+CONFIG_SPIRAM_SPEED_200M=y
+CONFIG_SPIRAM_USE_MALLOC=y
+CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=16384
+
+# --- Flash (16MB) ---
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# --- USB Host (fuer Flash-Tool ab Phase 5, hier bereits aktiviert
+#     damit die Partitions-/Speicherplanung von Anfang an stimmt) ---
+CONFIG_USB_HOST_CONTROL_TRANSFER_MAX_SIZE=1024
+
+# --- FreeRTOS: genug Headroom fuer LVGL + Modul-Tasks ---
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+CONFIG_FREERTOS_HZ=1000
+
+# --- Log-Level: waehrend Phase 1 ausfuehrlich, spaeter auf INFO reduzieren ---
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+
+# --- NVS-Verschluesselung ---
+# Bewusst NICHT in Phase 1 aktiviert: CONFIG_NVS_ENCRYPTION braucht eine
+# durchdachte eFuse-Key-Provisionierung (HMAC-Key-Block), die als Sicherheits-
+# feature sauber eingefuehrt werden soll statt blind angeschaltet zu werden -
+# siehe Implementierungsplan Abschnitt 6 (Server-API), wird in Phase 4 mit
+# echtem Provisioning-Workflow nachgezogen, wenn Server-Zugangsdaten dazukommen.
+# CONFIG_NVS_ENCRYPTION=y
+
+# --- Compiler-Optimierung ---
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y

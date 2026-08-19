@@ -1,0 +1,17 @@
+## Externe Komponenten fuer Display/Touch/LVGL-Bring-up.
+##
+## Panel-/Touch-Auswahl (siehe board_init.c und /docs/hardware_reference.md):
+## Sekundaerquellen nennen den Display-/Touch-Controller uneinheitlich als
+## "ST7121" bzw. "ST7123". Im offiziellen ESP Component Registry existiert
+## esp_lcd_st7121 (MIPI-DSI-Panel) und separat esp_lcd_touch_st7123
+## (I2C-Touch) - das ist die einzige Kombination, die dort tatsaechlich
+## als eigenstaendige Pakete auffindbar ist, und wird daher verwendet.
+## MUSS beim ersten Boot auf echter Hardware bestaetigt werden (Touch reagiert?).
+dependencies:
+  espressif/esp_lcd_st7121: "^1.0.0"
+  espressif/esp_lcd_st7123: "*"
+  espressif/esp_lcd_touch_st7123: "*"
+  espressif/esp_lcd_touch: "^1.1.2"
+  espressif/esp_lvgl_port: "^2.7.2"
+  lvgl/lvgl: "^9.2.0"
+  idf: ">=5.3"

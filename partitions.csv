@@ -1,0 +1,11 @@
+# Name,     Type, SubType,  Offset,    Size,     Flags
+# CyberDeck Tab5 - 16 MB Flash
+# nvs_key ist die verschluesselte NVS-Schluesselpartition (CONFIG_NVS_ENCRYPTION)
+nvs_key,    data, nvs_keys, 0x9000,    0x1000,
+nvs,        data, nvs,      0xa000,    0x36000,
+otadata,    data, ota,      0x40000,   0x2000,
+phy_init,   data, phy,      0x42000,   0x1000,
+ota_0,      app,  ota_0,    0x50000,   0x600000,
+ota_1,      app,  ota_1,    0x650000,  0x600000,
+coredump,   data, coredump, 0xc50000,  0x100000,
+storage,    data, spiffs,   0xd50000,  0x2b0000,
