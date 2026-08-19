@@ -190,6 +190,36 @@ I2S-Konfiguration und Codec-Init 1:1 aus der M5Stack-Werksfirmware uebernommen
   Teilintegration - siehe `components/modules/sensors/sensors_module.h` fuer
   die Begruendung im Code.
 
+## microSD-Karte: bekannter Boot-Crash, zurueckgestellt (2026-08-19)
+
+Ein erster Versuch, microSD-Unterstuetzung hinzuzufuegen (SDMMC 4-Bit-Modus,
+Pins/LDO-Kanal 1:1 aus der M5Tab5-UserDemo-Firmware uebernommen, siehe
+`components/m5stack_tab5/m5stack_tab5.c` dort: GPIO39-44, LDO-Kanal 4 fuer
+die SDMMC-IO-Spannung) fuehrte auf echter Hardware zu einem **reproduzierbaren
+Boot-Crash-Loop**:
+
+```
+assert failed: xTaskCreateStaticPinnedToCore
+freertos_tasks_c_additions.h:300 (xPortCheckValidTCBMem(pxTaskBuffer))
+```
+
+Wichtig: der Crash passiert INNERHALB von esp_hosteds eigener frueher
+Task-Erzeugung (waehrend `H_API: ESP-Hosted starting`), **bevor** `app_main()`
+ueberhaupt laeuft - nicht in eigenem Code. Nach vollstaendigem
+`idf.py fullclean` weiterhin reproduzierbar (kein Stale-Build-Artefakt).
+Vermutung: Konflikt zwischen dem SDMMC/FATFS-Stack (`fatfs`,
+`esp_driver_sdmmc`, `sdmmc`, `vfs`) und esp_hosteds eigenem SDIO-basiertem
+Wi-Fi-Transport (beide nutzen SDMMC/SDIO-nahe Peripherie auf dem ESP32-P4) -
+nicht abschliessend verifiziert.
+
+Der betroffene Code (`core/storage/sd_module.c`, `modules/files/`) wurde
+**bewusst nicht auf `main` gemerged** (main muss immer sauber booten) und
+liegt stattdessen auf dem Branch `wip/sd-card-crash-investigation` fuer eine
+spaetere, gezielte Debugging-Session (Bisektion: nur fatfs+esp_driver_sdmmc
+linken ohne eigenen Code, um zu pruefen ob es ein reiner Linking-Konflikt
+ist; ESP-IDF/esp_hosted-Issue-Tracker nach bekannten Interaktionsproblemen
+durchsuchen).
+
 ## Nicht verifizierte/gesperrte Bereiche (bewusst, siehe pin_table.h)
 
 - **GPIO_EXT-Header**: keine Pinbelegung in verfuegbaren Quellen gefunden.
