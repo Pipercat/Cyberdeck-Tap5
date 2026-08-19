@@ -229,8 +229,8 @@ static lv_obj_t *i2c_screen_create(void)
 {
     lv_obj_t *scr = lv_obj_create(NULL);
     theme_apply_screen(scr);
-    lv_obj_set_style_pad_top(scr, THEME_SCREEN_PAD_TOP, 0);
     lv_obj_set_style_pad_all(scr, 16, 0);
+    lv_obj_set_style_pad_top(scr, THEME_SCREEN_PAD_TOP, 0);   // ueberschreibt pad_all nur oben
     lv_obj_set_style_pad_bottom(scr, 74, 0);  // Platz fuer den schwebenden Zurueck-Button
     lv_obj_set_flex_flow(scr, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_pad_row(scr, 10, 0);
@@ -267,7 +267,8 @@ static lv_obj_t *i2c_screen_create(void)
 
     s_list = lv_obj_create(scr);
     lv_obj_remove_style_all(s_list);
-    lv_obj_set_size(s_list, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_width(s_list, LV_PCT(100));
+    lv_obj_set_flex_grow(s_list, 1);  // fuellt Restplatz statt 100% Elternhoehe (ueberlappte sonst Header/Zurueck-Button)
     lv_obj_set_flex_flow(s_list, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_pad_row(s_list, 8, 0);
 
