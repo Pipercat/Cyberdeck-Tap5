@@ -25,7 +25,7 @@ static const module_entry_t k_modules[] = {
     { LV_SYMBOL_LIST,     "SPI Tools",   NAV_SCREEN_SPI,     false },
     { LV_SYMBOL_LOOP,     "PWM",         NAV_SCREEN_PWM,     true  },
     { LV_SYMBOL_IMAGE,    "ADC / Scope", NAV_SCREEN_ADC,     true  },
-    { LV_SYMBOL_EYE_OPEN, "Sensors",     NAV_SCREEN_SENSORS, false },
+    { LV_SYMBOL_EYE_OPEN, "Sensors",     NAV_SCREEN_SENSORS, true  },
     { LV_SYMBOL_VIDEO,    "Camera",      NAV_SCREEN_CAMERA,  false },
     { LV_SYMBOL_VOLUME_MAX,"Audio",      NAV_SCREEN_AUDIO,   true  },
     { LV_SYMBOL_WIFI,     "Network",     NAV_SCREEN_NETWORK, true  },

@@ -16,6 +16,7 @@
 #include "settings_module_ui.h"
 #include "network_module_ui.h"
 #include "wifi_module.h"
+#include "sensors_module_ui.h"
 #include "statusbar.h"
 #include "esp_lvgl_port.h"
 
@@ -72,6 +73,7 @@ void app_main(void)
     audio_module_ui_register();
     settings_module_ui_register();
     network_module_ui_register();
+    sensors_module_ui_register();
     nav_show(NAV_SCREEN_DASHBOARD);
     lv_timer_create(statusbar_refresh_timer_cb, 3000, NULL);
     lvgl_port_unlock();

@@ -166,6 +166,30 @@ I2S-Konfiguration und Codec-Init 1:1 aus der M5Stack-Werksfirmware uebernommen
   (siehe `settings.h`-Kommentar), ein Klartext-Passwort in der Settings-Blob
   waere unsicher. Muss nach jedem Boot neu eingegeben werden.
 
+## Sensoren-Bring-up (Phase 6, auf echter Hardware geflasht und verifiziert 2026-08-19)
+
+- **RTC (RX8130CE, I2C 0x32)**: Register-Layout (SEC=0x10...YEAR=0x16, BCD-
+  kodiert, 24h-Stundenregister) 1:1 aus der offiziellen M5Tab5-UserDemo-
+  Firmware uebernommen (`hal/utils/rx8130/rx8130.cpp`), nicht aus dem
+  allgemeinen Datenblatt geraten. Auf echter Hardware verifiziert: Chip
+  antwortet auf I2C (`i2c_master_transmit_receive` liefert `ESP_OK`), aber
+  liefert ein **ungueltiges Datum** (Tag=0, Jahr=2002) - die Uhr wurde auf
+  diesem konkreten Geraet offenbar noch nie gestellt. Das ist ein echtes
+  Chip-Ergebnis, kein Uebertragungsfehler; die Software erkennt das (Tag/
+  Monat-Plausibilitaetspruefung) und zeigt "RTC nicht gestellt" statt eines
+  unsinnigen Datums - keine erfundene "aktuelle Zeit" wird angezeigt. Eine
+  Set-Time-Funktion (z.B. nach NTP-Sync ueber Wi-Fi) ist nicht implementiert,
+  waere aber ein naheliegender naechster Schritt.
+- **IMU (BMI270)**: bewusst NICHT implementiert. Der Chip braucht zwingend
+  einen ueber I2C hochgeladenen Firmware-Konfigurations-Blob (Bosch BMI2
+  SensorAPI, `platforms/tab5/components/sensor_bmi270/` in der Referenz-
+  Firmware, ~30.000 Zeilen Vendor-Code) fuer jegliche Datenausgabe - anders
+  als bei RX8130/INA226 funktioniert hier kein minimaler Register-Read ohne
+  dieses Init. Das Vendoring dieses Umfangs wuerde eine eigene, sorgfaeltig
+  gepruefte Session brauchen statt einer unvollstaendigen/riskanten
+  Teilintegration - siehe `components/modules/sensors/sensors_module.h` fuer
+  die Begruendung im Code.
+
 ## Nicht verifizierte/gesperrte Bereiche (bewusst, siehe pin_table.h)
 
 - **GPIO_EXT-Header**: keine Pinbelegung in verfuegbaren Quellen gefunden.
