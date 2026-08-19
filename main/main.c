@@ -13,6 +13,7 @@
 #include "system_module.h"
 #include "system_module_ui.h"
 #include "audio_module_ui.h"
+#include "settings_module_ui.h"
 #include "statusbar.h"
 #include "esp_lvgl_port.h"
 
@@ -49,6 +50,7 @@ void app_main(void)
     const settings_t *cfg = settings_get();
     ESP_LOGI(TAG, "Settings geladen: schema=%" PRIu32 " backlight=%u%%",
              cfg->schema_version, cfg->backlight_percent);
+    ESP_ERROR_CHECK(board_set_backlight(cfg->backlight_percent));
 
     // LVGL-Objekte duerfen nur unter Lock erzeugt werden (esp_lvgl_port
     // haelt einen eigenen Task fuer den Render-/Input-Loop).
@@ -62,6 +64,7 @@ void app_main(void)
     serial_module_ui_register();
     system_module_ui_register();
     audio_module_ui_register();
+    settings_module_ui_register();
     nav_show(NAV_SCREEN_DASHBOARD);
     lv_timer_create(statusbar_refresh_timer_cb, 3000, NULL);
     lvgl_port_unlock();

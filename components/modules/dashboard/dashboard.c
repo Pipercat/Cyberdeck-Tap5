@@ -32,7 +32,7 @@ static const module_entry_t k_modules[] = {
     { LV_SYMBOL_DIRECTORY,"Files",       NAV_SCREEN_FILES,   false },
     { LV_SYMBOL_COPY,     "Projects",    NAV_SCREEN_PROJECTS,false },
     { LV_SYMBOL_SETTINGS, "System",      NAV_SCREEN_SYSTEM,  true  },
-    { LV_SYMBOL_SETTINGS, "Settings",    NAV_SCREEN_SETTINGS,false },
+    { LV_SYMBOL_SETTINGS, "Settings",    NAV_SCREEN_SETTINGS,true  },
 };
 #define MODULE_COUNT (sizeof(k_modules) / sizeof(k_modules[0]))
 

@@ -404,7 +404,9 @@ esp_err_t board_init(void)
     ESP_RETURN_ON_ERROR(init_backlight(), TAG, "Backlight-Init fehlgeschlagen");
     ESP_RETURN_ON_ERROR(init_lvgl(), TAG, "LVGL-Init fehlgeschlagen");
 
-    ESP_ERROR_CHECK(board_set_backlight(80));
+    // Kein hartkodierter Helligkeitswert hier: der Aufrufer (main.c) setzt die
+    // Helligkeit gleich im Anschluss auf den aus den Settings geladenen Wert -
+    // sonst wuerde ein persistierter Wert bei jedem Boot ueberschrieben.
 
     ESP_LOGI(TAG, "Board-Init abgeschlossen: Panel=%s, Touch %s",
              s_display_type == TAB5_DISPLAY_ST7121 ? "ST7121" : "ST7123",
