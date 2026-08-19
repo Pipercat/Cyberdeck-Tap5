@@ -1,6 +1,7 @@
 #include "system_module.h"
 #include "board_init.h"
 #include "self_test.h"
+#include "wifi_module.h"
 #include "driver/i2c_master.h"
 #include "driver/temperature_sensor.h"
 #include "esp_heap_caps.h"
@@ -57,12 +58,26 @@ static self_test_status_t selftest_battery_sensor(const char **out_detail)
     return SELF_TEST_PASS;
 }
 
+// Stoesst den SDIO-Link zum ESP32-C6-Wi-Fi-Co-Prozessor an (falls noch nicht
+// geschehen - wifi_module_init() ist idempotent). Auf echter Hardware
+// verifiziert: dauert ca. 2.3s, siehe docs/hardware_reference.md. Bewusst
+// nur bei explizitem Nutzer-Klick auf "Self-Test", nicht beim Boot.
+static self_test_status_t selftest_wifi_link(const char **out_detail)
+{
+    if (wifi_module_init() != ESP_OK) {
+        *out_detail = "ESP32-C6-SDIO-Link fehlgeschlagen (wifi_module_init)";
+        return SELF_TEST_FAIL;
+    }
+    return SELF_TEST_PASS;
+}
+
 esp_err_t system_module_init(void)
 {
     self_test_register("Display", selftest_display);
     self_test_register("System I2C Bus", selftest_system_i2c);
     self_test_register("PSRAM", selftest_psram);
     self_test_register("Battery Sensor (INA226)", selftest_battery_sensor);
+    self_test_register("Wi-Fi Link (ESP32-C6/SDIO)", selftest_wifi_link);
 
     const temperature_sensor_config_t cfg = TEMPERATURE_SENSOR_CONFIG_DEFAULT(10, 80);
     esp_err_t err = temperature_sensor_install(&cfg, &s_temp_handle);
