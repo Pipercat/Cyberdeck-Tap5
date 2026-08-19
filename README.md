@@ -7,8 +7,11 @@ Hardware-Verifikationsstand.
 ## Status
 
 **Phase 1 (Foundation) und Phase 2 (Engineering Basics) abgeschlossen, Phase 3
-(Media) teilweise abgeschlossen** - alles auf echter Hardware geflasht und
-gebootet verifiziert (2026-08-19).
+(Media) teilweise abgeschlossen, Phase 4 (Netzwerk) Wi-Fi-Grundlagen
+abgeschlossen** - alles auf echter Hardware geflasht und gebootet verifiziert
+(2026-08-19). Ausserdem: Settings-Screen (Backlight, Werksreset) und mehrere
+UI-Layout-Bugs behoben (Statusleiste verdeckte Titel/Zurueck-Button auf den
+Unterseiten - siehe Git-Historie fuer Details zur eigentlichen Ursache).
 
 Phase 1: Projektgeruest, verifizierte Pin-HAL, Display/Touch/LVGL-Bring-up,
 Dashboard mit dynamischem Kachel-Grid, Navigation, Dark-Theme, Settings (NVS),
@@ -37,6 +40,15 @@ aber nirgends). Live-View braucht zusaetzlich die ISP-Pipeline
 Referenz nur geraten werden koennte - der Nutzer hat sich explizit dagegen
 entschieden, das zu riskieren, und die Kamera fuer eine spaetere, gezielte
 Session mit mehr Recherchezeit zurueckgestellt.
+
+Phase 4 (bisher): **Wi-Fi** (STA-Scan/Connect/Disconnect, Status inkl. RSSI/
+IP in der Statusleiste). Das Funkmodul sitzt auf einem separaten ESP32-C6-
+Co-Prozessor (nicht dem Haupt-SoC), angebunden per SDIO2 - Architektur
+(esp_hosted + esp_wifi_remote) und Pin-/Kconfig-Werte 1:1 aus der offiziellen
+Werksfirmware uebernommen und auf echter Hardware verifiziert (SDIO-Handshake
+mit dem C6 funktioniert, ~2.3s, kein Hang). Details und Boot-Log-Auszug in
+`docs/hardware_reference.md`. Passwoerter werden bewusst nicht persistiert
+(NVS-Verschluesselung ist noch nicht aktiviert).
 
 Auf dem angeschlossenen Geraet erfolgreich geflasht und gebootet: Panel-Typ
 ST7121 automatisch erkannt, Touch aktiv, Dashboard und alle Phase-2/3-Module
@@ -77,9 +89,9 @@ idf.py -p /dev/cu.usbXXXXX flash monitor
 
 - Display zeigt das Dashboard (Portrait, 720x1280) mit Statusleiste oben
   (Platzhalterwerte) und einem dynamischen Kachel-Grid, Backlight an (80%).
-- Touch auf GPIO/PWM/ADC/I2C Scanner/Serial/System/Audio oeffnet das jeweils
-  funktionsfaehige Modul; die restlichen Kacheln (inkl. Camera) zeigen
-  weiterhin "Coming Soon".
+- Touch auf GPIO/PWM/ADC/I2C Scanner/Serial/System/Audio/Network/Settings
+  oeffnet das jeweils funktionsfaehige Modul; die restlichen Kacheln (Flash,
+  SPI, Sensors, Camera, Files, Projects) zeigen weiterhin "Coming Soon".
 
 **Bekannte offene Punkte:**
 - Geraete mit dem aelteren ILI9881C+GT911-Panel ("Gen1", vor ca. Oktober 2025)
@@ -93,8 +105,8 @@ idf.py -p /dev/cu.usbXXXXX flash monitor
 ## Naechste Phasen
 
 Siehe Implementierungsplan (`/Users/marvin/.claude/plans/proud-hatching-spring.md`):
-Kamera (zurueckgestellt, siehe oben), Phase 4 (Server/Netzwerk), Phase 5
-(Flashing externer ESP32-Boards), Phase 6 (Projects/Testsequenzen/Diagnostics).
+Kamera (zurueckgestellt, siehe oben), Rest von Phase 4 (Server-API/File-Browser),
+Phase 5 (Flashing externer ESP32-Boards), Phase 6 (Projects/Testsequenzen/Diagnostics).
 
 ## Push-Test
 
