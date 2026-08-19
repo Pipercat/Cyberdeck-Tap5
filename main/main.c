@@ -17,6 +17,8 @@
 #include "network_module_ui.h"
 #include "wifi_module.h"
 #include "sensors_module_ui.h"
+#include "files_module_ui.h"
+#include "sd_module.h"
 #include "statusbar.h"
 #include "esp_lvgl_port.h"
 
@@ -43,6 +45,7 @@ static void statusbar_refresh_timer_cb(lv_timer_t *timer)
     statusbar_set_ram_percent(ram_pct);
     statusbar_set_battery_voltage(stats.battery_voltage_v, stats.battery_voltage_v >= 0.0f);
     statusbar_set_wifi(wifi_module_get_rssi(), wifi_module_get_state() == WIFI_MODULE_STATE_CONNECTED);
+    statusbar_set_sd_present(sd_module_is_mounted());
 }
 
 void app_main(void)
@@ -74,6 +77,16 @@ void app_main(void)
     settings_module_ui_register();
     network_module_ui_register();
     sensors_module_ui_register();
+    files_module_ui_register();
+
+    // TEMP-TEST: SD-Mount-Verhalten auf echter Hardware verifizieren (Hang-
+    // Risiko pruefen), danach wieder entfernt.
+    sd_module_status_t temp_sd;
+    esp_err_t sd_err = sd_module_mount(&temp_sd);
+    ESP_LOGI(TAG, "TEMP-TEST SD-Mount: err=%s mounted=%d name=%s cap=%llu",
+             esp_err_to_name(sd_err), temp_sd.mounted, temp_sd.card_name,
+             (unsigned long long)temp_sd.capacity_bytes);
+
     nav_show(NAV_SCREEN_DASHBOARD);
     lv_timer_create(statusbar_refresh_timer_cb, 3000, NULL);
     lvgl_port_unlock();
