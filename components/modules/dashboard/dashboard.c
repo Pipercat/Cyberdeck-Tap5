@@ -8,27 +8,31 @@ typedef struct {
     const char *symbol;
     const char *title;
     nav_screen_id_t target;
+    bool implemented;  // steuert die Karten-Unterschrift, siehe dashboard_create()
 } module_entry_t;
 
 // Modul-Grid gemaess Architektur-Plan Abschnitt 7. Reihenfolge wie in der
 // Nutzeranforderung 3 (Flash, GPIO, Serial, I2C, SPI, PWM, ADC/Scope,
 // Sensors, Camera, Audio, Network, Files, Projects, System, Settings).
+// "implemented" muss beim Fertigstellen eines Moduls hier mit umgestellt
+// werden - sonst zeigt die Karte weiter "Coming Soon" trotz funktionierender
+// Unterseite (auf echter Hardware als Bug gemeldet, siehe Git-Historie).
 static const module_entry_t k_modules[] = {
-    { LV_SYMBOL_DOWNLOAD, "Flash",       NAV_SCREEN_FLASH },
-    { LV_SYMBOL_SHUFFLE,  "GPIO",        NAV_SCREEN_GPIO },
-    { LV_SYMBOL_KEYBOARD, "Serial",      NAV_SCREEN_SERIAL },
-    { LV_SYMBOL_LIST,     "I2C Scanner", NAV_SCREEN_I2C },
-    { LV_SYMBOL_LIST,     "SPI Tools",   NAV_SCREEN_SPI },
-    { LV_SYMBOL_LOOP,     "PWM",         NAV_SCREEN_PWM },
-    { LV_SYMBOL_IMAGE,    "ADC / Scope", NAV_SCREEN_ADC },
-    { LV_SYMBOL_EYE_OPEN, "Sensors",     NAV_SCREEN_SENSORS },
-    { LV_SYMBOL_VIDEO,    "Camera",      NAV_SCREEN_CAMERA },
-    { LV_SYMBOL_VOLUME_MAX,"Audio",      NAV_SCREEN_AUDIO },
-    { LV_SYMBOL_WIFI,     "Network",     NAV_SCREEN_NETWORK },
-    { LV_SYMBOL_DIRECTORY,"Files",       NAV_SCREEN_FILES },
-    { LV_SYMBOL_COPY,     "Projects",    NAV_SCREEN_PROJECTS },
-    { LV_SYMBOL_SETTINGS, "System",      NAV_SCREEN_SYSTEM },
-    { LV_SYMBOL_SETTINGS, "Settings",    NAV_SCREEN_SETTINGS },
+    { LV_SYMBOL_DOWNLOAD, "Flash",       NAV_SCREEN_FLASH,   false },
+    { LV_SYMBOL_SHUFFLE,  "GPIO",        NAV_SCREEN_GPIO,    true  },
+    { LV_SYMBOL_KEYBOARD, "Serial",      NAV_SCREEN_SERIAL,  true  },
+    { LV_SYMBOL_LIST,     "I2C Scanner", NAV_SCREEN_I2C,     true  },
+    { LV_SYMBOL_LIST,     "SPI Tools",   NAV_SCREEN_SPI,     false },
+    { LV_SYMBOL_LOOP,     "PWM",         NAV_SCREEN_PWM,     true  },
+    { LV_SYMBOL_IMAGE,    "ADC / Scope", NAV_SCREEN_ADC,     true  },
+    { LV_SYMBOL_EYE_OPEN, "Sensors",     NAV_SCREEN_SENSORS, false },
+    { LV_SYMBOL_VIDEO,    "Camera",      NAV_SCREEN_CAMERA,  false },
+    { LV_SYMBOL_VOLUME_MAX,"Audio",      NAV_SCREEN_AUDIO,   true  },
+    { LV_SYMBOL_WIFI,     "Network",     NAV_SCREEN_NETWORK, false },
+    { LV_SYMBOL_DIRECTORY,"Files",       NAV_SCREEN_FILES,   false },
+    { LV_SYMBOL_COPY,     "Projects",    NAV_SCREEN_PROJECTS,false },
+    { LV_SYMBOL_SETTINGS, "System",      NAV_SCREEN_SYSTEM,  true  },
+    { LV_SYMBOL_SETTINGS, "Settings",    NAV_SCREEN_SETTINGS,false },
 };
 #define MODULE_COUNT (sizeof(k_modules) / sizeof(k_modules[0]))
 
@@ -45,7 +49,7 @@ static lv_obj_t *dashboard_create(void)
 {
     lv_obj_t *scr = lv_obj_create(NULL);
     theme_apply_screen(scr);
-    lv_obj_set_style_pad_top(scr, 48, 0); // Platz fuer die persistente Statusleiste
+    lv_obj_set_style_pad_top(scr, THEME_SCREEN_PAD_TOP, 0); // Platz fuer die persistente Statusleiste
     lv_obj_set_style_pad_all(scr, 16, 0);
     lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_pad_row(scr, 12, 0);
@@ -65,7 +69,8 @@ static lv_obj_t *dashboard_create(void)
     lv_obj_set_layout(scr, LV_LAYOUT_GRID);
 
     for (size_t i = 0; i < MODULE_COUNT; i++) {
-        lv_obj_t *card = module_card_create(scr, k_modules[i].symbol, k_modules[i].title, "Coming Soon",
+        const char *status = k_modules[i].implemented ? NULL : "Coming Soon";
+        lv_obj_t *card = module_card_create(scr, k_modules[i].symbol, k_modules[i].title, status,
                                              module_card_click_cb, (void *)(intptr_t)k_modules[i].target);
         int col = i % GRID_COLUMNS;
         int row = i / GRID_COLUMNS;

@@ -126,7 +126,7 @@ static lv_obj_t *adc_screen_create(void)
 
     lv_obj_t *scr = lv_obj_create(NULL);
     theme_apply_screen(scr);
-    lv_obj_set_style_pad_top(scr, 48, 0);
+    lv_obj_set_style_pad_top(scr, THEME_SCREEN_PAD_TOP, 0);
     lv_obj_set_style_pad_all(scr, 16, 0);
     lv_obj_set_style_pad_bottom(scr, 74, 0);  // Platz fuer den schwebenden Zurueck-Button
     lv_obj_set_flex_flow(scr, LV_FLEX_FLOW_COLUMN);
@@ -139,7 +139,7 @@ static lv_obj_t *adc_screen_create(void)
     lv_obj_set_flex_align(header, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_t *title = lv_label_create(header);
     lv_label_set_text(title, "ADC / Mini-Oszilloskop");
-    lv_obj_set_style_text_color(title, THEME_COLOR_TEXT, 0);
+    theme_apply_title(title);
 
     back_button_create(scr, back_cb);
 

@@ -1,6 +1,7 @@
 #include "nav.h"
 #include "theme.h"
 #include "statusbar.h"
+#include "back_button.h"
 #include "esp_log.h"
 
 static const char *TAG = "nav";
@@ -40,21 +41,17 @@ static lv_obj_t *create_placeholder_screen_for(nav_screen_id_t id)
     theme_apply_screen(scr);
     lv_obj_set_flex_flow(scr, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(scr, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_top(scr, 48, 0); // Platz fuer Statusleiste
+    lv_obj_set_style_pad_top(scr, THEME_SCREEN_PAD_TOP, 0); // Platz fuer Statusleiste
 
     lv_obj_t *title = lv_label_create(scr);
     lv_label_set_text_fmt(title, "%s", k_screen_titles[id] ? k_screen_titles[id] : "?");
-    lv_obj_set_style_text_color(title, THEME_COLOR_TEXT, 0);
+    theme_apply_title(title);
 
     lv_obj_t *subtitle = lv_label_create(scr);
-    lv_label_set_text(subtitle, "Coming Soon - Phase 2+");
+    lv_label_set_text(subtitle, "Coming Soon - spaetere Phase");
     lv_obj_set_style_text_color(subtitle, THEME_COLOR_TEXT_DIM, 0);
 
-    lv_obj_t *back = lv_btn_create(scr);
-    lv_obj_set_style_bg_color(back, THEME_COLOR_ACCENT, 0);
-    lv_obj_add_event_cb(back, back_button_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *back_label = lv_label_create(back);
-    lv_label_set_text(back_label, LV_SYMBOL_LEFT " Dashboard");
+    back_button_create(scr, back_button_cb);
 
     return scr;
 }

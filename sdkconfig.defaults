@@ -45,3 +45,11 @@ CONFIG_LOG_DEFAULT_LEVEL_INFO=y
 
 # --- Compiler-Optimierung ---
 CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+
+# --- LVGL-Schriftgroessen ---
+# Das 5"-Panel hat bei 1280x720 eine hohe Pixeldichte (~294 PPI) - der
+# LVGL-Default (Montserrat 14) wirkt darauf sehr klein. Zusaetzliche
+# Groessen fuer Karten-Titel/Ueberschriften (24) und normalen Screen-Text
+# (20) aktiviert, siehe components/ui/theme/theme.h.
+CONFIG_LV_FONT_MONTSERRAT_20=y
+CONFIG_LV_FONT_MONTSERRAT_24=y
