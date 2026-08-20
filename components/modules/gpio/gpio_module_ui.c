@@ -7,6 +7,7 @@
 #include "lvgl.h"
 
 static lv_obj_t *s_grid = NULL;
+static lv_obj_t *s_back_btn = NULL;
 static lv_obj_t *s_modal = NULL;
 static lv_obj_t *s_modal_body = NULL;
 static lv_obj_t *s_modal_title = NULL;
@@ -105,6 +106,7 @@ static void close_button_cb(lv_event_t *e)
 static void back_to_dashboard_cb(lv_event_t *e)
 {
     (void)e;
+    close_modal();  // sonst bleibt das Detail-Modal beim naechsten Aufruf des Screens offen
     nav_show(NAV_SCREEN_DASHBOARD);
 }
 
@@ -264,6 +266,7 @@ static lv_obj_t *gpio_screen_create(void)
     lv_obj_set_style_pad_all(scr, 16, 0);
     lv_obj_set_style_pad_top(scr, THEME_SCREEN_PAD_TOP, 0);   // ueberschreibt pad_all nur oben
     lv_obj_set_style_pad_bottom(scr, 74, 0);  // Platz fuer den schwebenden Zurueck-Button
+    lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);  // sonst verschiebt Scrollen den schwebenden Zurueck-Button
     lv_obj_set_flex_flow(scr, LV_FLEX_FLOW_COLUMN);
 
     lv_obj_t *header = lv_obj_create(scr);
@@ -276,7 +279,7 @@ static lv_obj_t *gpio_screen_create(void)
     lv_label_set_text(title, "GPIO Control");
     theme_apply_title(title);
 
-    back_button_create(scr, back_to_dashboard_cb);
+    s_back_btn = back_button_create(scr, back_to_dashboard_cb);
 
     s_grid = lv_obj_create(scr);
     lv_obj_remove_style_all(s_grid);
@@ -310,6 +313,9 @@ static lv_obj_t *gpio_screen_create(void)
     }
 
     build_modal(scr);
+    // Modal wird zuletzt angelegt und liegt damit im Z-Order ueber dem
+    // Zurueck-Button - ohne dies waere der Button bei offenem Modal verdeckt.
+    lv_obj_move_foreground(s_back_btn);
     return scr;
 }
 

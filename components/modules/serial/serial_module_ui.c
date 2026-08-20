@@ -27,6 +27,7 @@ static lv_obj_t *s_timestamp_toggle = NULL;
 static lv_obj_t *s_log_area = NULL;
 static lv_obj_t *s_send_input = NULL;
 static lv_obj_t *s_keyboard = NULL;
+static lv_obj_t *s_back_btn = NULL;
 static lv_timer_t *s_poll_timer = NULL;
 
 static bool s_hex_mode = false;
@@ -157,6 +158,7 @@ static void back_cb(lv_event_t *e)
 static void send_input_focus_cb(lv_event_t *e)
 {
     (void)e;
+    lv_obj_add_flag(s_back_btn, LV_OBJ_FLAG_HIDDEN);  // Tastatur deckt den Button sonst ab
     lv_obj_clear_flag(s_keyboard, LV_OBJ_FLAG_HIDDEN);
     lv_keyboard_set_textarea(s_keyboard, s_send_input);
 }
@@ -165,6 +167,7 @@ static void send_input_defocus_cb(lv_event_t *e)
 {
     (void)e;
     lv_obj_add_flag(s_keyboard, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(s_back_btn, LV_OBJ_FLAG_HIDDEN);
 }
 
 static lv_obj_t *serial_screen_create(void)
@@ -176,6 +179,7 @@ static lv_obj_t *serial_screen_create(void)
     lv_obj_set_style_pad_all(scr, 16, 0);
     lv_obj_set_style_pad_top(scr, THEME_SCREEN_PAD_TOP, 0);   // ueberschreibt pad_all nur oben
     lv_obj_set_style_pad_bottom(scr, 74, 0);  // Platz fuer den schwebenden Zurueck-Button
+    lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);  // sonst verschiebt Scrollen den schwebenden Zurueck-Button
     lv_obj_set_flex_flow(scr, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_pad_row(scr, 8, 0);
 
@@ -188,7 +192,7 @@ static lv_obj_t *serial_screen_create(void)
     lv_label_set_text(title, "Serial Terminal");
     theme_apply_title(title);
 
-    back_button_create(scr, back_cb);
+    s_back_btn = back_button_create(scr, back_cb);
 
     // --- Steuerzeile 1: Pins + Baud + Start/Stop ---
     lv_obj_t *ctrl_row = lv_obj_create(scr);
@@ -285,6 +289,11 @@ static lv_obj_t *serial_screen_create(void)
 
     s_keyboard = lv_keyboard_create(scr);
     lv_keyboard_set_textarea(s_keyboard, s_send_input);
+    // Schwebend statt im Flex-Flow, sonst waechst der Screen-Inhalt beim
+    // Einblenden ueber die Bildschirmhoehe hinaus und scr faengt an zu
+    // scrollen - das verschiebt den schwebenden Zurueck-Button mit.
+    lv_obj_add_flag(s_keyboard, LV_OBJ_FLAG_IGNORE_LAYOUT);
+    lv_obj_align(s_keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_add_flag(s_keyboard, LV_OBJ_FLAG_HIDDEN);
 
     return scr;

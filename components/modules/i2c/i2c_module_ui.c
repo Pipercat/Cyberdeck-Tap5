@@ -8,6 +8,7 @@
 static lv_obj_t *s_list = NULL;
 static lv_obj_t *s_status_label = NULL;
 static lv_obj_t *s_speed_dropdown = NULL;
+static lv_obj_t *s_back_btn = NULL;
 
 static lv_obj_t *s_modal = NULL;
 static lv_obj_t *s_modal_title = NULL;
@@ -141,6 +142,9 @@ static void scan_btn_cb(lv_event_t *e)
 static void back_cb(lv_event_t *e)
 {
     (void)e;
+    if (s_modal) {
+        lv_obj_add_flag(s_modal, LV_OBJ_FLAG_HIDDEN);  // sonst bleibt das Modal beim naechsten Aufruf offen
+    }
     i2c_module_deinit();
     nav_show(NAV_SCREEN_DASHBOARD);
 }
@@ -232,6 +236,7 @@ static lv_obj_t *i2c_screen_create(void)
     lv_obj_set_style_pad_all(scr, 16, 0);
     lv_obj_set_style_pad_top(scr, THEME_SCREEN_PAD_TOP, 0);   // ueberschreibt pad_all nur oben
     lv_obj_set_style_pad_bottom(scr, 74, 0);  // Platz fuer den schwebenden Zurueck-Button
+    lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);  // sonst verschiebt Scrollen den schwebenden Zurueck-Button
     lv_obj_set_flex_flow(scr, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_pad_row(scr, 10, 0);
 
@@ -244,7 +249,7 @@ static lv_obj_t *i2c_screen_create(void)
     lv_label_set_text(title, "I2C Scanner (Port A)");
     theme_apply_title(title);
 
-    back_button_create(scr, back_cb);
+    s_back_btn = back_button_create(scr, back_cb);
 
     lv_obj_t *ctrl_row = lv_obj_create(scr);
     lv_obj_remove_style_all(ctrl_row);
@@ -273,6 +278,9 @@ static lv_obj_t *i2c_screen_create(void)
     lv_obj_set_style_pad_row(s_list, 8, 0);
 
     build_modal(scr);
+    // Modal wird zuletzt angelegt und liegt damit im Z-Order ueber dem
+    // Zurueck-Button - ohne dies waere der Button bei offenem Modal verdeckt.
+    lv_obj_move_foreground(s_back_btn);
     return scr;
 }
 

@@ -220,6 +220,40 @@ linken ohne eigenen Code, um zu pruefen ob es ein reiner Linking-Konflikt
 ist; ESP-IDF/esp_hosted-Issue-Tracker nach bekannten Interaktionsproblemen
 durchsuchen).
 
+### Update (2026-08-20): derselbe Crash auch mit SPIFFS statt SD - Vermutung praezisiert
+
+Ein Versuch, Rest-Phase-4 (Server-API/File-Browser) **ohne SD-Karte** zu
+implementieren - SPIFFS auf der internen `storage`-Flash-Partition
+(`esp_vfs_spiffs_register`) statt SDMMC, um die Sensor-Analogie oben zu
+vermeiden - loeste auf echter Hardware **denselben Crash** aus:
+
+```
+assert failed: xTaskCreateStaticPinnedToCore
+freertos_tasks_c_additions.h:299 (xPortcheckValidStackMem(puxStackBuffer))
+```
+
+Ebenfalls reproduzierbar bei jedem Boot, ebenfalls INNERHALB von esp_hosteds
+frueher Task-Erzeugung, bevor `app_main()` laeuft (Crash direkt nach
+`transport: Add ESP-Hosted channel IF[2]` im Log). Der einzige linkende
+Unterschied zu einem sauber bootenden Build: das `spiffs`-Komponenten-
+REQUIRES zieht `vfs` mit rein (fuer `esp_vfs_spiffs_register`/POSIX-
+Dateizugriff) - **kein** `fatfs`/`esp_driver_sdmmc`/`sdmmc` im Spiel.
+
+Das praezisiert die obige Vermutung: der Konflikt haengt vermutlich nicht am
+SDMMC-Peripherietreiber selbst, sondern generell daran, dass **irgendeine
+Komponente `vfs` aktiviert**, waehrend esp_hosted laeuft - ob ueber SD/FATFS
+oder SPIFFS gebraucht. Naechster Bisektionsschritt fuer die spaetere Session:
+ein Minimal-Build, der nur `REQUIRES vfs` zu einer sonst unveraenderten
+main-Konfiguration hinzufuegt (ganz ohne SPIFFS/SD-Code), um zu pruefen, ob
+allein das Linken von `vfs` reicht.
+
+Der Versuch (SPIFFS-Storage + minimaler HTTP-Server ueber `esp_http_server`
+fuer eine Datei-Browser-Seite) wurde **wieder aus `main` entfernt** (gleicher
+Grund: main muss immer sauber booten). Der Code liegt unveraendert, aber
+nicht in `EXTRA_COMPONENT_DIRS` eingebunden, in `components/core/storage/`,
+`components/core/network/http_server.c(.h)` und `components/modules/files/`
+fuer die gleiche spaetere Debugging-Session wie die SD-Karte.
+
 ## Nicht verifizierte/gesperrte Bereiche (bewusst, siehe pin_table.h)
 
 - **GPIO_EXT-Header**: keine Pinbelegung in verfuegbaren Quellen gefunden.

@@ -107,11 +107,20 @@ idf.py -p /dev/cu.usbXXXXX flash monitor
   Portrait-Modus) - siehe `docs/hardware_reference.md`.
 - SD-Karte ist noch nicht eingebunden; Akku-Anzeige im System-Monitor zeigt
   nur die reale Spannung (INA226-Busspannung), kein kalibrierter Strom/Prozentwert.
+- Rest von Phase 4 (Server-API/SPIFFS-File-Browser) wurde versucht und wieder
+  aus `main` entfernt: SPIFFS+`vfs` loest denselben Boot-Crash aus wie zuvor
+  die SD-Karte (esp_hosted-Konflikt, siehe `docs/hardware_reference.md`,
+  Abschnitt "microSD-Karte: bekannter Boot-Crash"). Betrifft vermutlich jede
+  Komponente, die `vfs` aktiviert - nicht nur SDMMC. Code liegt unveraendert,
+  aber unverlinkt in `components/core/storage/`, `components/core/network/
+  http_server.c(.h)`, `components/modules/files/` fuer eine spaetere,
+  gezielte Debugging-Session.
 
 ## Naechste Phasen
 
 Siehe Implementierungsplan (`/Users/marvin/.claude/plans/proud-hatching-spring.md`):
-Kamera (zurueckgestellt, siehe oben), Rest von Phase 4 (Server-API/File-Browser),
+Kamera (zurueckgestellt, siehe oben), esp_hosted/vfs-Bootcrash-Untersuchung
+(Voraussetzung fuer Server-API/File-Browser UND SD-Karte, siehe oben),
 Phase 5 (Flashing externer ESP32-Boards), Phase 6 (Projects/Testsequenzen/Diagnostics).
 
 ## Push-Test

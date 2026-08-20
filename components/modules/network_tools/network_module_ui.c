@@ -14,6 +14,7 @@ static lv_obj_t *s_keyboard = NULL;
 static lv_obj_t *s_status_label = NULL;
 static lv_obj_t *s_scan_list = NULL;
 static lv_obj_t *s_scan_btn = NULL;
+static lv_obj_t *s_back_btn = NULL;
 static lv_timer_t *s_poll_timer = NULL;
 static bool s_wifi_ready = false;
 
@@ -50,6 +51,7 @@ static void scan_result_click_cb(lv_event_t *e)
 {
     const char *ssid = (const char *)lv_event_get_user_data(e);
     lv_textarea_set_text(s_ssid_input, ssid);
+    lv_obj_add_flag(s_back_btn, LV_OBJ_FLAG_HIDDEN);  // Tastatur deckt den Button sonst ab
     lv_obj_clear_flag(s_keyboard, LV_OBJ_FLAG_HIDDEN);
     lv_keyboard_set_textarea(s_keyboard, s_pass_input);
     lv_obj_add_state(s_pass_input, LV_STATE_FOCUSED);
@@ -142,6 +144,7 @@ static void disconnect_btn_cb(lv_event_t *e)
 static void input_focus_cb(lv_event_t *e)
 {
     lv_obj_t *ta = lv_event_get_target(e);
+    lv_obj_add_flag(s_back_btn, LV_OBJ_FLAG_HIDDEN);  // Tastatur deckt den Button sonst ab
     lv_obj_clear_flag(s_keyboard, LV_OBJ_FLAG_HIDDEN);
     lv_keyboard_set_textarea(s_keyboard, ta);
 }
@@ -150,6 +153,7 @@ static void input_defocus_cb(lv_event_t *e)
 {
     (void)e;
     lv_obj_add_flag(s_keyboard, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(s_back_btn, LV_OBJ_FLAG_HIDDEN);
 }
 
 static void back_cb(lv_event_t *e)
@@ -168,6 +172,7 @@ static lv_obj_t *network_screen_create(void)
     lv_obj_set_style_pad_all(scr, 16, 0);
     lv_obj_set_style_pad_top(scr, THEME_SCREEN_PAD_TOP, 0);   // ueberschreibt pad_all nur oben
     lv_obj_set_style_pad_bottom(scr, 74, 0);  // Platz fuer den schwebenden Zurueck-Button
+    lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);  // sonst verschiebt Scrollen den schwebenden Zurueck-Button
     lv_obj_set_flex_flow(scr, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_pad_row(scr, 10, 0);
 
@@ -180,7 +185,7 @@ static lv_obj_t *network_screen_create(void)
     lv_label_set_text(title, "Network / Wi-Fi");
     theme_apply_title(title);
 
-    back_button_create(scr, back_cb);
+    s_back_btn = back_button_create(scr, back_cb);
 
     s_status_label = lv_label_create(scr);
     lv_label_set_text(s_status_label, "Initialisiere Wi-Fi (ESP32-C6)...");
@@ -249,7 +254,15 @@ static lv_obj_t *network_screen_create(void)
     lv_obj_set_style_pad_row(s_scan_list, 6, 0);
 
     s_keyboard = lv_keyboard_create(scr);
+    // Schwebend statt im Flex-Flow, sonst verzerrt das Einblenden das Layout
+    // (scan_list schrumpft) und die Tastatur kann den Zurueck-Button abdecken.
+    lv_obj_add_flag(s_keyboard, LV_OBJ_FLAG_IGNORE_LAYOUT);
+    lv_obj_align(s_keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_add_flag(s_keyboard, LV_OBJ_FLAG_HIDDEN);
+
+    // Zurueck-Button zuletzt in den Vordergrund holen, damit spaeter
+    // erzeugter/veraenderter Inhalt (Scan-Liste, Tastatur) ihn nie verdeckt.
+    lv_obj_move_foreground(s_back_btn);
 
     return scr;
 }
