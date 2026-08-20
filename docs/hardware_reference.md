@@ -254,6 +254,62 @@ nicht in `EXTRA_COMPONENT_DIRS` eingebunden, in `components/core/storage/`,
 `components/core/network/http_server.c(.h)` und `components/modules/files/`
 fuer die gleiche spaetere Debugging-Session wie die SD-Karte.
 
+### Update (2026-08-20, spaeter): Crash auch OHNE vfs ausgeloest - vfs-Theorie widerlegt
+
+Ein rein kosmetischer Design-System-Umbau (`components/ui/theme/theme.c`:
+zusaetzliche `lv_style_t`-Objekte fuer Button-States/Toggle/Status-Chips,
+insgesamt nur ein paar hundert Byte mehr statische Daten, **keinerlei**
+neue Komponenten-REQUIRES, kein `vfs`, kein Flash-/Storage-Zugriff) loeste
+auf echter Hardware **denselben Crash** aus wie SD-Karte und SPIFFS - 3 von
+3 Resets crashten identisch:
+
+```
+assert failed: xTaskCreateStaticPinnedToCore
+freertos_tasks_c_additions.h:300 (xPortCheckValidTCBMem(pxTaskBuffer))
+```
+
+Nach Zuruecksetzen von `theme.c`/`theme.h` und den drei Pilot-Dateien
+(`serial_module_ui.c`, `system_module_ui.c`, `network_module_ui.c`) auf den
+exakten `main`-Stand: 3 von 3 Resets booteten sauber (identische
+Byte-Laenge des Boot-Logs bei allen drei Versuchen). Selber USB-Port, selbes
+Kabel, unmittelbar vorher/nachher getestet - also kein Verbindungs-/
+Power-Artefakt, sondern reproduzierbar an den Code-Aenderungen haengend.
+
+**Das widerlegt die vfs-spezifische Vermutung von oben.** Der gemeinsame
+Nenner ist nicht `vfs`, SDMMC oder eine bestimmte Peripherie, sondern
+offenbar irgendeine Verschiebung im statischen Speicherlayout des Binaries
+(BSS/Data-Segmentgroesse, Sektionsreihenfolge o.ae.) - esp_hosteds fruehe,
+noch vor `app_main()` laufende statische Task-Erzeugung reagiert darauf mit
+einem fehlschlagenden TCB-/Stack-Speicher-Gueltigkeitscheck
+(`xPortCheckValidTCBMem`/`xPortcheckValidStackMem`), vermutlich weil sie auf
+eine hart codierte oder sonst wie fragile Speicheradresse/Regionsannahme
+angewiesen ist, die bei anderer Binary-Groesse nicht mehr stimmt.
+
+Praktische Konsequenz: **auf diesem Board ist praktisch keine Code-Aenderung
+a priori sicher**, bis sie tatsaechlich auf echter Hardware sauber
+durchgebootet wurde (mehrfach, nicht nur einmal - beim SPIFFS-Fall wirkte
+der erste Boot nach dem Flashen noch unauffaellig, erst ein zweiter Reset
+zeigte den Crash zuverlaessig). Neue Features/Refactorings sollten deshalb
+vor dem "fertig"-Status mindestens 3x per Reset (nicht Neuflash - Neuflash
+allein reicht als Test nicht) auf dem Geraet verifiziert werden.
+
+Naechste Schritte fuer die spaetere Debugging-Session (verschaerft
+gegenueber oben):
+1. Linker-Map (`build/cyberdeck_tab5.map`) eines sauber bootenden und eines
+   crashenden Builds vergleichen - welche Symboladressen/-groessen
+   verschieben sich, insbesondere alles unter `esp_hosted`/`transport`/
+   `H_API` und der FreeRTOS-Task-Erzeugung selbst.
+2. `RA`-Register aus dem Crash-Dump (z.B. `0x4ff0936a`, `MEPC 0x4ff00d2c`)
+   per `riscv32-esp-elf-addr2line -e build/cyberdeck_tab5.elf` gegen das
+   ELF des jeweiligen crashenden Builds aufloesen, um die exakte
+   Aufruferfunktion zu identifizieren (nicht in dieser Session gemacht -
+   das crashende Binary wurde vor der Analyse bereits durch den
+   Wiederherstellungs-Build ueberschrieben).
+3. Espressif/esp_hosted-Issue-Tracker gezielt nach "xTaskCreateStaticPinnedToCore"
+   + "esp_hosted" + "esp32p4" durchsuchen - das Muster (fragil gegenueber
+   Binary-Layout, vor app_main()) wirkt wie ein bekannter Klasse-von-Bugs statt
+   ein projektspezifisches Problem.
+
 ## Nicht verifizierte/gesperrte Bereiche (bewusst, siehe pin_table.h)
 
 - **GPIO_EXT-Header**: keine Pinbelegung in verfuegbaren Quellen gefunden.
