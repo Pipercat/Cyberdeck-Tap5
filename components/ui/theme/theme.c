@@ -86,6 +86,14 @@ void theme_apply_button(lv_obj_t *btn, theme_button_variant_t variant)
     lv_obj_add_style(btn, &s_style_btn_disabled, LV_STATE_DISABLED);
 }
 
+void theme_set_button_variant(lv_obj_t *btn, theme_button_variant_t variant)
+{
+    for (int i = 0; i < 5; i++) {
+        lv_obj_remove_style(btn, &s_style_btn_variant[i], 0);
+    }
+    lv_obj_add_style(btn, &s_style_btn_variant[variant], 0);
+}
+
 void theme_apply_toggle(lv_obj_t *btn, bool active)
 {
     lv_obj_add_flag(btn, LV_OBJ_FLAG_CHECKABLE);

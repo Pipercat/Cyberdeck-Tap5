@@ -103,7 +103,7 @@ static lv_obj_t *settings_screen_create(void)
     lv_obj_t *reset_label = lv_label_create(reset_card);
     lv_label_set_text(reset_label, "Werkseinstellungen");
     lv_obj_t *reset_btn = lv_btn_create(reset_card);
-    lv_obj_set_style_bg_color(reset_btn, THEME_COLOR_WARNING, 0);
+    theme_apply_button(reset_btn, THEME_BTN_WARNING);
     lv_obj_set_height(reset_btn, THEME_TOUCH_TARGET_MIN);
     lv_obj_add_event_cb(reset_btn, reset_defaults_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *reset_l = lv_label_create(reset_btn);

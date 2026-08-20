@@ -167,7 +167,8 @@ static void restart_btn_cb(lv_event_t *e)
     lv_msgbox_add_text(mbox, "Alle nicht gespeicherten Zustaende (z.B. laufende PWM-/Serial-Tests) gehen verloren.");
     lv_obj_t *btn_cancel = lv_msgbox_add_footer_button(mbox, "Abbrechen");
     lv_obj_t *btn_confirm = lv_msgbox_add_footer_button(mbox, "Neustart");
-    lv_obj_set_style_bg_color(btn_confirm, THEME_COLOR_DANGER, 0);
+    theme_apply_button(btn_cancel, THEME_BTN_NEUTRAL);
+    theme_apply_button(btn_confirm, THEME_BTN_DANGER);
     lv_obj_add_event_cb(btn_cancel, restart_confirm_event_cb, LV_EVENT_CLICKED, mbox);
     lv_obj_add_event_cb(btn_confirm, restart_confirm_event_cb, LV_EVENT_CLICKED, mbox);
 }
@@ -253,6 +254,7 @@ static lv_obj_t *system_screen_create(void)
     s_modal_title = lv_label_create(modal_header);
     lv_obj_set_style_text_color(s_modal_title, THEME_COLOR_TEXT, 0);
     lv_obj_t *close_btn = lv_btn_create(modal_header);
+    theme_apply_button(close_btn, THEME_BTN_NEUTRAL);
     lv_obj_set_size(close_btn, 44, 44);
     lv_obj_add_event_cb(close_btn, close_modal_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *close_l = lv_label_create(close_btn);

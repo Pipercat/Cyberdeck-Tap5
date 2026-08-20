@@ -174,6 +174,7 @@ static void build_modal(lv_obj_t *parent)
     s_modal_title = lv_label_create(header);
     lv_obj_set_style_text_color(s_modal_title, THEME_COLOR_TEXT, 0);
     lv_obj_t *close_btn = lv_btn_create(header);
+    theme_apply_button(close_btn, THEME_BTN_NEUTRAL);
     lv_obj_set_size(close_btn, 44, 44);
     lv_obj_add_event_cb(close_btn, close_modal_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *close_l = lv_label_create(close_btn);
@@ -190,6 +191,7 @@ static void build_modal(lv_obj_t *parent)
     struct { const char *l; int d; } reg_btns[] = { {"-16",-16}, {"-1",-1}, {"+1",1}, {"+16",16} };
     for (size_t i = 0; i < 4; i++) {
         lv_obj_t *b = lv_btn_create(reg_row);
+        theme_apply_button(b, THEME_BTN_NEUTRAL);
         lv_obj_set_size(b, 60, 44);
         lv_obj_add_event_cb(b, reg_step_cb, LV_EVENT_CLICKED, (void *)(intptr_t)reg_btns[i].d);
         lv_obj_t *l = lv_label_create(b); lv_label_set_text(l, reg_btns[i].l); lv_obj_center(l);
@@ -205,6 +207,7 @@ static void build_modal(lv_obj_t *parent)
     struct { const char *l; int d; } val_btns[] = { {"-16",-16}, {"-1",-1}, {"+1",1}, {"+16",16} };
     for (size_t i = 0; i < 4; i++) {
         lv_obj_t *b = lv_btn_create(val_row);
+        theme_apply_button(b, THEME_BTN_NEUTRAL);
         lv_obj_set_size(b, 60, 44);
         lv_obj_add_event_cb(b, val_step_cb, LV_EVENT_CLICKED, (void *)(intptr_t)val_btns[i].d);
         lv_obj_t *l = lv_label_create(b); lv_label_set_text(l, val_btns[i].l); lv_obj_center(l);
@@ -216,11 +219,11 @@ static void build_modal(lv_obj_t *parent)
     lv_obj_set_flex_flow(action_row, LV_FLEX_FLOW_ROW);
     lv_obj_set_style_pad_column(action_row, 10, 0);
     lv_obj_t *read_btn = lv_btn_create(action_row);
-    lv_obj_set_style_bg_color(read_btn, THEME_COLOR_ACCENT, 0);
+    theme_apply_button(read_btn, THEME_BTN_PRIMARY);
     lv_obj_add_event_cb(read_btn, read_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *read_l = lv_label_create(read_btn); lv_label_set_text(read_l, "Read");
     lv_obj_t *write_btn = lv_btn_create(action_row);
-    lv_obj_set_style_bg_color(write_btn, THEME_COLOR_WARNING, 0);
+    theme_apply_button(write_btn, THEME_BTN_WARNING);
     lv_obj_add_event_cb(write_btn, write_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *write_l = lv_label_create(write_btn); lv_label_set_text(write_l, "Write");
 
@@ -261,7 +264,7 @@ static lv_obj_t *i2c_screen_create(void)
     s_speed_dropdown = lv_dropdown_create(ctrl_row);
     lv_dropdown_set_options(s_speed_dropdown, "100 kHz\n400 kHz");
     lv_obj_t *scan_btn = lv_btn_create(ctrl_row);
-    lv_obj_set_style_bg_color(scan_btn, THEME_COLOR_ACCENT, 0);
+    theme_apply_button(scan_btn, THEME_BTN_PRIMARY);
     lv_obj_add_event_cb(scan_btn, scan_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *scan_l = lv_label_create(scan_btn);
     lv_label_set_text(scan_l, LV_SYMBOL_REFRESH " Scan");

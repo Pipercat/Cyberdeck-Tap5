@@ -144,7 +144,7 @@ static void gpio_ui_rebuild_modal_body(void)
         lv_obj_t *btn = lv_btn_create(mode_row);
         lv_obj_set_size(btn, 70, THEME_TOUCH_TARGET_MIN);
         bool active = (mode == options[i].mode);
-        lv_obj_set_style_bg_color(btn, active ? THEME_COLOR_ACCENT : THEME_COLOR_SURFACE_HI, 0);
+        theme_apply_toggle(btn, active);
         lv_obj_add_event_cb(btn, mode_button_cb, LV_EVENT_CLICKED, (void *)(intptr_t)options[i].mode);
         lv_obj_t *l = lv_label_create(btn);
         lv_label_set_text(l, options[i].label);
@@ -166,12 +166,13 @@ static void gpio_ui_rebuild_modal_body(void)
         lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
         lv_obj_set_style_pad_column(row, 12, 0);
         lv_obj_t *low_btn = lv_btn_create(row);
+        theme_apply_button(low_btn, THEME_BTN_NEUTRAL);
         lv_obj_set_size(low_btn, 100, THEME_TOUCH_TARGET_MIN);
         lv_obj_add_event_cb(low_btn, output_toggle_cb, LV_EVENT_CLICKED, (void *)(intptr_t)false);
         lv_obj_t *low_l = lv_label_create(low_btn); lv_label_set_text(low_l, "LOW"); lv_obj_center(low_l);
         lv_obj_t *high_btn = lv_btn_create(row);
+        theme_apply_button(high_btn, THEME_BTN_SUCCESS);
         lv_obj_set_size(high_btn, 100, THEME_TOUCH_TARGET_MIN);
-        lv_obj_set_style_bg_color(high_btn, THEME_COLOR_SUCCESS, 0);
         lv_obj_add_event_cb(high_btn, output_toggle_cb, LV_EVENT_CLICKED, (void *)(intptr_t)true);
         lv_obj_t *high_l = lv_label_create(high_btn); lv_label_set_text(high_l, "HIGH"); lv_obj_center(high_l);
     } else if (mode == GPIO_MODULE_MODE_INPUT || mode == GPIO_MODULE_MODE_INPUT_PULLUP ||
@@ -246,6 +247,7 @@ static void build_modal(lv_obj_t *parent)
     lv_obj_set_style_text_color(s_modal_title, THEME_COLOR_TEXT, 0);
 
     lv_obj_t *close_btn = lv_btn_create(header);
+    theme_apply_button(close_btn, THEME_BTN_NEUTRAL);
     lv_obj_set_size(close_btn, 44, 44);
     lv_obj_add_event_cb(close_btn, close_button_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *close_l = lv_label_create(close_btn);

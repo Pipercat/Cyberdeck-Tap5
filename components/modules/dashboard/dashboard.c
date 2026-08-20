@@ -8,6 +8,7 @@
 #include "wifi_module.h"
 #include "lvgl.h"
 #include <stdio.h>
+#include <string.h>
 
 typedef struct {
     const char *symbol;
@@ -84,29 +85,53 @@ static lv_obj_t *s_network_card = NULL;
 static lv_obj_t *s_gpio_card = NULL;
 static lv_timer_t *s_refresh_timer = NULL;
 
+// Nur bei tatsaechlicher Aenderung neu zeichnen: auf echter Hardware
+// verursachte ein bedingungsloses module_card_set_status() alle 2s ein
+// sichtbares kurzes Aufblitzen des Displays, obwohl sich der Inhalt in den
+// meisten Zyklen gar nicht aenderte (auf echter Hardware bemaengelt).
+static void set_status_if_changed(lv_obj_t *card, char *last_buf, size_t last_buf_len,
+                                   const char *new_text, lv_color_t color)
+{
+    if (strncmp(last_buf, new_text, last_buf_len) == 0) {
+        return;
+    }
+    strncpy(last_buf, new_text, last_buf_len - 1);
+    last_buf[last_buf_len - 1] = '\0';
+    module_card_set_status(card, new_text, color);
+}
+
 static void refresh_live_status(lv_timer_t *timer)
 {
     (void)timer;
 
+    static char s_last_serial[16] = "";
+    static char s_last_network[48] = "";
+    static char s_last_gpio[24] = "";
+
     if (s_serial_card != NULL) {
         bool running = serial_module_is_running();
-        module_card_set_status(s_serial_card, running ? "RUNNING" : "Idle",
-                                running ? THEME_COLOR_SUCCESS : THEME_COLOR_TEXT_DIM);
+        set_status_if_changed(s_serial_card, s_last_serial, sizeof(s_last_serial),
+                               running ? "RUNNING" : "Idle",
+                               running ? THEME_COLOR_SUCCESS : THEME_COLOR_TEXT_DIM);
     }
 
     if (s_network_card != NULL) {
         wifi_module_state_t state = wifi_module_get_state();
         char buf[48];
+        lv_color_t color;
         if (state == WIFI_MODULE_STATE_CONNECTED) {
             char ip[16] = "?";
             wifi_module_get_ip_str(ip, sizeof(ip));
             snprintf(buf, sizeof(buf), "%s, %d dBm", ip, wifi_module_get_rssi());
-            module_card_set_status(s_network_card, buf, THEME_COLOR_SUCCESS);
+            color = THEME_COLOR_SUCCESS;
         } else if (state == WIFI_MODULE_STATE_CONNECTING) {
-            module_card_set_status(s_network_card, "Verbinde...", THEME_COLOR_WARNING);
+            snprintf(buf, sizeof(buf), "Verbinde...");
+            color = THEME_COLOR_WARNING;
         } else {
-            module_card_set_status(s_network_card, "Getrennt", THEME_COLOR_TEXT_DIM);
+            snprintf(buf, sizeof(buf), "Getrennt");
+            color = THEME_COLOR_TEXT_DIM;
         }
+        set_status_if_changed(s_network_card, s_last_network, sizeof(s_last_network), buf, color);
     }
 
     if (s_gpio_card != NULL) {
@@ -118,12 +143,15 @@ static void refresh_live_status(lv_timer_t *timer)
             }
         }
         char buf[24];
+        lv_color_t color;
         if (active > 0) {
             snprintf(buf, sizeof(buf), "%d aktiv", active);
-            module_card_set_status(s_gpio_card, buf, THEME_COLOR_SUCCESS);
+            color = THEME_COLOR_SUCCESS;
         } else {
-            module_card_set_status(s_gpio_card, "Frei", THEME_COLOR_TEXT_DIM);
+            snprintf(buf, sizeof(buf), "Frei");
+            color = THEME_COLOR_TEXT_DIM;
         }
+        set_status_if_changed(s_gpio_card, s_last_gpio, sizeof(s_last_gpio), buf, color);
     }
 }
 
@@ -183,7 +211,7 @@ static lv_obj_t *dashboard_create(void)
     for (size_t i = 0; i < QUICK_ACTION_COUNT; i++) {
         lv_obj_t *btn = lv_btn_create(quick_row);
         lv_obj_set_height(btn, LV_PCT(100));
-        lv_obj_set_style_bg_color(btn, THEME_COLOR_SURFACE_HI, 0);
+        theme_apply_button(btn, THEME_BTN_NEUTRAL);
         lv_obj_add_event_cb(btn, quick_action_click_cb, LV_EVENT_CLICKED,
                              (void *)(intptr_t)k_quick_actions[i].target);
         lv_obj_t *row = lv_obj_create(btn);

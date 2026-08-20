@@ -91,7 +91,7 @@ static void start_stop_cb(lv_event_t *e)
     if (serial_module_is_running()) {
         serial_module_stop();
         lv_label_set_text(s_start_stop_label, LV_SYMBOL_PLAY " Start");
-        lv_obj_set_style_bg_color(s_start_stop_btn, THEME_COLOR_SUCCESS, 0);
+        theme_set_button_variant(s_start_stop_btn, THEME_BTN_SUCCESS);
         return;
     }
     if (s_pin_count == 0) return;
@@ -106,7 +106,7 @@ static void start_stop_cb(lv_event_t *e)
     if (err != ESP_OK) return;
 
     lv_label_set_text(s_start_stop_label, LV_SYMBOL_STOP " Stop");
-    lv_obj_set_style_bg_color(s_start_stop_btn, THEME_COLOR_DANGER, 0);
+    theme_set_button_variant(s_start_stop_btn, THEME_BTN_DANGER);
 }
 
 static void hex_toggle_cb(lv_event_t *e)
@@ -229,7 +229,7 @@ static lv_obj_t *serial_screen_create(void)
     lv_dropdown_set_selected(s_baud_dropdown, 4);  // 115200 Default
 
     s_start_stop_btn = lv_btn_create(ctrl_row);
-    lv_obj_set_style_bg_color(s_start_stop_btn, THEME_COLOR_SUCCESS, 0);
+    theme_apply_button(s_start_stop_btn, THEME_BTN_SUCCESS);
     lv_obj_add_event_cb(s_start_stop_btn, start_stop_cb, LV_EVENT_CLICKED, NULL);
     s_start_stop_label = lv_label_create(s_start_stop_btn);
     lv_label_set_text(s_start_stop_label, LV_SYMBOL_PLAY " Start");
@@ -279,7 +279,7 @@ static lv_obj_t *serial_screen_create(void)
     lv_textarea_set_one_line(s_send_input, true);
     lv_textarea_set_placeholder_text(s_send_input, "Text senden...");
     lv_obj_t *send_btn = lv_btn_create(send_row);
-    lv_obj_set_style_bg_color(send_btn, THEME_COLOR_ACCENT, 0);
+    theme_apply_button(send_btn, THEME_BTN_PRIMARY);
     lv_obj_add_event_cb(send_btn, send_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *send_l = lv_label_create(send_btn);
     lv_label_set_text(send_l, LV_SYMBOL_RIGHT " Send");

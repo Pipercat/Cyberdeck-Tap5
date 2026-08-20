@@ -78,6 +78,12 @@ void theme_apply_screen(lv_obj_t *obj);
 void theme_apply_title(lv_obj_t *label);
 
 void theme_apply_button(lv_obj_t *btn, theme_button_variant_t variant);
+
+// Wechselt die Variante eines bereits mit theme_apply_button() erzeugten
+// Buttons zur Laufzeit (z.B. Start/Stop-Button: SUCCESS waehrend gestoppt,
+// DANGER waehrend laeuft). Pressed-/Disabled-Feedback bleibt erhalten, wird
+// nicht erneut angewendet.
+void theme_set_button_variant(lv_obj_t *btn, theme_button_variant_t variant);
 void theme_apply_toggle(lv_obj_t *btn, bool active);
 void theme_set_toggle_active(lv_obj_t *btn, bool active);
 void theme_apply_status_chip(lv_obj_t *label, theme_status_t status);

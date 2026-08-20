@@ -107,7 +107,7 @@ static void pause_btn_cb(lv_event_t *e)
     (void)e;
     s_paused = !s_paused;
     lv_label_set_text(s_pause_label, s_paused ? LV_SYMBOL_PLAY " Fortsetzen" : LV_SYMBOL_PAUSE " Pause");
-    lv_obj_set_style_bg_color(s_pause_btn, s_paused ? THEME_COLOR_SUCCESS : THEME_COLOR_SURFACE_HI, 0);
+    theme_set_toggle_active(s_pause_btn, s_paused);
 }
 
 static void back_cb(lv_event_t *e)
@@ -169,6 +169,7 @@ static lv_obj_t *adc_screen_create(void)
     lv_obj_add_event_cb(s_rate_dropdown, rate_dropdown_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
     s_pause_btn = lv_btn_create(ctrl_row);
+    theme_apply_toggle(s_pause_btn, false);
     lv_obj_add_event_cb(s_pause_btn, pause_btn_cb, LV_EVENT_CLICKED, NULL);
     s_pause_label = lv_label_create(s_pause_btn);
     lv_label_set_text(s_pause_label, LV_SYMBOL_PAUSE " Pause");
@@ -221,7 +222,7 @@ static void adc_on_show(void)
     s_paused = false;
     if (s_pause_label != NULL) {
         lv_label_set_text(s_pause_label, LV_SYMBOL_PAUSE " Pause");
-        lv_obj_set_style_bg_color(s_pause_btn, THEME_COLOR_SURFACE_HI, 0);
+        theme_set_toggle_active(s_pause_btn, false);
     }
     if (s_chart != NULL && s_series != NULL) {
         lv_chart_set_all_value(s_chart, s_series, LV_CHART_POINT_NONE);

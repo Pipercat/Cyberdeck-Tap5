@@ -20,6 +20,8 @@ static int32_t s_sweep_dir = 1;
 static uint32_t s_sweep_pulse_us = PWM_MODULE_SERVO_MIN_US;
 static uint16_t s_generic_freq_hz = 1000;
 
+static lv_obj_t *s_mode_servo_btn = NULL;
+static lv_obj_t *s_mode_generic_btn = NULL;
 static lv_obj_t *s_pin_dropdown = NULL;
 static lv_obj_t *s_servo_panel = NULL;
 static lv_obj_t *s_generic_panel = NULL;
@@ -59,7 +61,7 @@ static void stop_sweep(void)
     }
     s_sweep_active = false;
     if (s_sweep_btn) {
-        lv_obj_set_style_bg_color(s_sweep_btn, THEME_COLOR_SURFACE_HI, 0);
+        theme_set_toggle_active(s_sweep_btn, false);
     }
 }
 
@@ -88,7 +90,7 @@ static void stop_pwm(void)
     stop_sweep();
     s_running = false;
     lv_label_set_text(s_start_stop_label, LV_SYMBOL_PLAY " Start");
-    lv_obj_set_style_bg_color(s_start_stop_btn, THEME_COLOR_SUCCESS, 0);
+    theme_set_button_variant(s_start_stop_btn, THEME_BTN_SUCCESS);
 }
 
 static void start_stop_cb(lv_event_t *e)
@@ -113,7 +115,7 @@ static void start_stop_cb(lv_event_t *e)
 
     s_running = true;
     lv_label_set_text(s_start_stop_label, LV_SYMBOL_STOP " Stop");
-    lv_obj_set_style_bg_color(s_start_stop_btn, THEME_COLOR_DANGER, 0);
+    theme_set_button_variant(s_start_stop_btn, THEME_BTN_DANGER);
 }
 
 static void pin_dropdown_cb(lv_event_t *e)
@@ -138,6 +140,8 @@ static void mode_btn_cb(lv_event_t *e)
         lv_obj_add_flag(s_servo_panel, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(s_generic_panel, LV_OBJ_FLAG_HIDDEN);
     }
+    theme_set_toggle_active(s_mode_servo_btn, mode == PWM_UI_MODE_SERVO);
+    theme_set_toggle_active(s_mode_generic_btn, mode == PWM_UI_MODE_GENERIC);
 }
 
 static void servo_slider_cb(lv_event_t *e)
@@ -187,7 +191,7 @@ static void sweep_btn_cb(lv_event_t *e)
     s_sweep_active = true;
     s_sweep_pulse_us = (uint32_t)lv_slider_get_value(s_servo_slider);
     s_sweep_dir = 1;
-    lv_obj_set_style_bg_color(s_sweep_btn, THEME_COLOR_ACCENT, 0);
+    theme_set_toggle_active(s_sweep_btn, true);
     s_sweep_timer = lv_timer_create(sweep_timer_cb, 30, NULL);
 }
 
@@ -247,12 +251,14 @@ static lv_obj_t *pwm_screen_create(void)
         s_selected_gpio = s_pwm_pins[0];
     }
 
-    lv_obj_t *mode_servo = lv_btn_create(pin_row);
-    lv_obj_add_event_cb(mode_servo, mode_btn_cb, LV_EVENT_CLICKED, (void *)(intptr_t)PWM_UI_MODE_SERVO);
-    lv_obj_t *ms_l = lv_label_create(mode_servo); lv_label_set_text(ms_l, "Servo");
-    lv_obj_t *mode_generic = lv_btn_create(pin_row);
-    lv_obj_add_event_cb(mode_generic, mode_btn_cb, LV_EVENT_CLICKED, (void *)(intptr_t)PWM_UI_MODE_GENERIC);
-    lv_obj_t *mg_l = lv_label_create(mode_generic); lv_label_set_text(mg_l, "LED/PWM");
+    s_mode_servo_btn = lv_btn_create(pin_row);
+    theme_apply_toggle(s_mode_servo_btn, true);
+    lv_obj_add_event_cb(s_mode_servo_btn, mode_btn_cb, LV_EVENT_CLICKED, (void *)(intptr_t)PWM_UI_MODE_SERVO);
+    lv_obj_t *ms_l = lv_label_create(s_mode_servo_btn); lv_label_set_text(ms_l, "Servo");
+    s_mode_generic_btn = lv_btn_create(pin_row);
+    theme_apply_toggle(s_mode_generic_btn, false);
+    lv_obj_add_event_cb(s_mode_generic_btn, mode_btn_cb, LV_EVENT_CLICKED, (void *)(intptr_t)PWM_UI_MODE_GENERIC);
+    lv_obj_t *mg_l = lv_label_create(s_mode_generic_btn); lv_label_set_text(mg_l, "LED/PWM");
 
     // --- Servo-Panel ---
     s_servo_panel = lv_obj_create(scr);
@@ -273,7 +279,7 @@ static lv_obj_t *pwm_screen_create(void)
     lv_obj_add_event_cb(s_servo_slider, servo_slider_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
     s_sweep_btn = lv_btn_create(s_servo_panel);
-    lv_obj_set_style_bg_color(s_sweep_btn, THEME_COLOR_SURFACE_HI, 0);
+    theme_apply_toggle(s_sweep_btn, false);
     lv_obj_add_event_cb(s_sweep_btn, sweep_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *sweep_l = lv_label_create(s_sweep_btn);
     lv_label_set_text(sweep_l, LV_SYMBOL_LOOP " Sweep");
@@ -311,7 +317,7 @@ static lv_obj_t *pwm_screen_create(void)
     // --- Start/Stop ---
     s_start_stop_btn = lv_btn_create(scr);
     lv_obj_set_size(s_start_stop_btn, 160, THEME_TOUCH_TARGET_MIN);
-    lv_obj_set_style_bg_color(s_start_stop_btn, THEME_COLOR_SUCCESS, 0);
+    theme_apply_button(s_start_stop_btn, THEME_BTN_SUCCESS);
     lv_obj_add_event_cb(s_start_stop_btn, start_stop_cb, LV_EVENT_CLICKED, NULL);
     s_start_stop_label = lv_label_create(s_start_stop_btn);
     lv_label_set_text(s_start_stop_label, LV_SYMBOL_PLAY " Start");

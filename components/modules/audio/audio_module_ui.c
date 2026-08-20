@@ -12,6 +12,8 @@ typedef enum { AUDIO_UI_MODE_MIC, AUDIO_UI_MODE_SPEAKER } audio_ui_mode_t;
 
 static audio_ui_mode_t s_mode = AUDIO_UI_MODE_MIC;
 
+static lv_obj_t *s_mic_mode_btn = NULL;
+static lv_obj_t *s_spk_mode_btn = NULL;
 static lv_obj_t *s_mic_panel = NULL;
 static lv_obj_t *s_speaker_panel = NULL;
 static lv_obj_t *s_level_bar = NULL;
@@ -60,7 +62,7 @@ static void mic_toggle_cb(lv_event_t *e)
     if (running) {
         audio_module_start_mic();
         lv_label_set_text(s_mic_toggle_label, LV_SYMBOL_STOP " Stop");
-        lv_obj_set_style_bg_color(s_mic_toggle_btn, THEME_COLOR_DANGER, 0);
+        theme_set_button_variant(s_mic_toggle_btn, THEME_BTN_DANGER);
         if (s_mic_refresh_timer == NULL) {
             s_mic_refresh_timer = lv_timer_create(mic_refresh_timer_cb, 150, NULL);
         } else {
@@ -69,7 +71,7 @@ static void mic_toggle_cb(lv_event_t *e)
     } else {
         audio_module_stop_mic();
         lv_label_set_text(s_mic_toggle_label, LV_SYMBOL_PLAY " Start");
-        lv_obj_set_style_bg_color(s_mic_toggle_btn, THEME_COLOR_SUCCESS, 0);
+        theme_set_button_variant(s_mic_toggle_btn, THEME_BTN_SUCCESS);
         if (s_mic_refresh_timer) lv_timer_pause(s_mic_refresh_timer);
         lv_bar_set_value(s_level_bar, 0, LV_ANIM_OFF);
     }
@@ -85,13 +87,15 @@ static void mode_btn_cb(lv_event_t *e)
         audio_module_stop_playback();
         s_playing = false;
         lv_label_set_text(s_play_label, LV_SYMBOL_PLAY " Play");
-        lv_obj_set_style_bg_color(s_play_btn, THEME_COLOR_SUCCESS, 0);
+        theme_set_button_variant(s_play_btn, THEME_BTN_SUCCESS);
     } else {
         lv_obj_add_flag(s_mic_panel, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(s_speaker_panel, LV_OBJ_FLAG_HIDDEN);
         audio_module_stop_mic();
         if (s_mic_refresh_timer) lv_timer_pause(s_mic_refresh_timer);
     }
+    theme_set_toggle_active(s_mic_mode_btn, mode == AUDIO_UI_MODE_MIC);
+    theme_set_toggle_active(s_spk_mode_btn, mode == AUDIO_UI_MODE_SPEAKER);
 }
 
 static void freq_slider_cb(lv_event_t *e)
@@ -122,7 +126,7 @@ static void play_btn_cb(lv_event_t *e)
         audio_module_stop_playback();
         s_playing = false;
         lv_label_set_text(s_play_label, LV_SYMBOL_PLAY " Play");
-        lv_obj_set_style_bg_color(s_play_btn, THEME_COLOR_SUCCESS, 0);
+        theme_set_button_variant(s_play_btn, THEME_BTN_SUCCESS);
         return;
     }
     int32_t hz = lv_slider_get_value(s_freq_slider);
@@ -130,7 +134,7 @@ static void play_btn_cb(lv_event_t *e)
     audio_module_start_tone((float)hz, vol);
     s_playing = true;
     lv_label_set_text(s_play_label, LV_SYMBOL_STOP " Stop");
-    lv_obj_set_style_bg_color(s_play_btn, THEME_COLOR_DANGER, 0);
+    theme_set_button_variant(s_play_btn, THEME_BTN_DANGER);
 }
 
 static void sweep_btn_cb(lv_event_t *e)
@@ -141,7 +145,7 @@ static void sweep_btn_cb(lv_event_t *e)
     audio_module_start_sweep(100.0f, 10000.0f, vol, 4000);
     s_playing = true;
     lv_label_set_text(s_play_label, LV_SYMBOL_STOP " Stop");
-    lv_obj_set_style_bg_color(s_play_btn, THEME_COLOR_DANGER, 0);
+    theme_set_button_variant(s_play_btn, THEME_BTN_DANGER);
 }
 
 static void back_cb(lv_event_t *e)
@@ -181,12 +185,14 @@ static lv_obj_t *audio_screen_create(void)
     lv_obj_set_size(mode_row, LV_PCT(100), LV_SIZE_CONTENT);
     lv_obj_set_flex_flow(mode_row, LV_FLEX_FLOW_ROW);
     lv_obj_set_style_pad_column(mode_row, 10, 0);
-    lv_obj_t *mic_mode_btn = lv_btn_create(mode_row);
-    lv_obj_add_event_cb(mic_mode_btn, mode_btn_cb, LV_EVENT_CLICKED, (void *)(intptr_t)AUDIO_UI_MODE_MIC);
-    lv_obj_t *mm_l = lv_label_create(mic_mode_btn); lv_label_set_text(mm_l, LV_SYMBOL_AUDIO " Mikrofon");
-    lv_obj_t *spk_mode_btn = lv_btn_create(mode_row);
-    lv_obj_add_event_cb(spk_mode_btn, mode_btn_cb, LV_EVENT_CLICKED, (void *)(intptr_t)AUDIO_UI_MODE_SPEAKER);
-    lv_obj_t *sm_l = lv_label_create(spk_mode_btn); lv_label_set_text(sm_l, LV_SYMBOL_VOLUME_MAX " Lautsprecher");
+    s_mic_mode_btn = lv_btn_create(mode_row);
+    theme_apply_toggle(s_mic_mode_btn, true);
+    lv_obj_add_event_cb(s_mic_mode_btn, mode_btn_cb, LV_EVENT_CLICKED, (void *)(intptr_t)AUDIO_UI_MODE_MIC);
+    lv_obj_t *mm_l = lv_label_create(s_mic_mode_btn); lv_label_set_text(mm_l, LV_SYMBOL_AUDIO " Mikrofon");
+    s_spk_mode_btn = lv_btn_create(mode_row);
+    theme_apply_toggle(s_spk_mode_btn, false);
+    lv_obj_add_event_cb(s_spk_mode_btn, mode_btn_cb, LV_EVENT_CLICKED, (void *)(intptr_t)AUDIO_UI_MODE_SPEAKER);
+    lv_obj_t *sm_l = lv_label_create(s_spk_mode_btn); lv_label_set_text(sm_l, LV_SYMBOL_VOLUME_MAX " Lautsprecher");
 
     // --- Mikrofon-Panel ---
     s_mic_panel = lv_obj_create(scr);
@@ -209,7 +215,7 @@ static lv_obj_t *audio_screen_create(void)
     lv_obj_set_style_text_color(s_peak_label, THEME_COLOR_TEXT_DIM, 0);
 
     s_mic_toggle_btn = lv_btn_create(s_mic_panel);
-    lv_obj_set_style_bg_color(s_mic_toggle_btn, THEME_COLOR_SUCCESS, 0);
+    theme_apply_button(s_mic_toggle_btn, THEME_BTN_SUCCESS);
     lv_obj_add_event_cb(s_mic_toggle_btn, mic_toggle_cb, LV_EVENT_CLICKED, NULL);
     s_mic_toggle_label = lv_label_create(s_mic_toggle_btn);
     lv_label_set_text(s_mic_toggle_label, LV_SYMBOL_PLAY " Start");
@@ -250,11 +256,12 @@ static lv_obj_t *audio_screen_create(void)
     lv_obj_set_flex_flow(btn_row, LV_FLEX_FLOW_ROW);
     lv_obj_set_style_pad_column(btn_row, 10, 0);
     s_play_btn = lv_btn_create(btn_row);
-    lv_obj_set_style_bg_color(s_play_btn, THEME_COLOR_SUCCESS, 0);
+    theme_apply_button(s_play_btn, THEME_BTN_SUCCESS);
     lv_obj_add_event_cb(s_play_btn, play_btn_cb, LV_EVENT_CLICKED, NULL);
     s_play_label = lv_label_create(s_play_btn);
     lv_label_set_text(s_play_label, LV_SYMBOL_PLAY " Play");
     lv_obj_t *sweep_btn = lv_btn_create(btn_row);
+    theme_apply_button(sweep_btn, THEME_BTN_NEUTRAL);
     lv_obj_add_event_cb(sweep_btn, sweep_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *sweep_l = lv_label_create(sweep_btn);
     lv_label_set_text(sweep_l, LV_SYMBOL_LOOP " Sweep 100Hz-10kHz");
