@@ -219,14 +219,14 @@ static lv_obj_t *network_screen_create(void)
     lv_obj_add_event_cb(s_pass_input, input_defocus_cb, LV_EVENT_DEFOCUSED, NULL);
 
     lv_obj_t *connect_btn = lv_btn_create(form_row);
-    lv_obj_set_style_bg_color(connect_btn, THEME_COLOR_ACCENT, 0);
+    theme_apply_button(connect_btn, THEME_BTN_PRIMARY);
     lv_obj_set_height(connect_btn, THEME_TOUCH_TARGET_MIN);
     lv_obj_add_event_cb(connect_btn, connect_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *connect_l = lv_label_create(connect_btn);
     lv_label_set_text(connect_l, LV_SYMBOL_WIFI " Verbinden");
 
     lv_obj_t *disconnect_btn = lv_btn_create(form_row);
-    lv_obj_set_style_bg_color(disconnect_btn, THEME_COLOR_SURFACE_HI, 0);
+    theme_apply_button(disconnect_btn, THEME_BTN_NEUTRAL);
     lv_obj_set_height(disconnect_btn, THEME_TOUCH_TARGET_MIN);
     lv_obj_add_event_cb(disconnect_btn, disconnect_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *disconnect_l = lv_label_create(disconnect_btn);
@@ -241,7 +241,7 @@ static lv_obj_t *network_screen_create(void)
     lv_obj_t *scan_title = lv_label_create(scan_row);
     lv_label_set_text(scan_title, "Verfuegbare Netze");
     s_scan_btn = lv_btn_create(scan_row);
-    lv_obj_set_style_bg_color(s_scan_btn, THEME_COLOR_ACCENT, 0);
+    theme_apply_button(s_scan_btn, THEME_BTN_PRIMARY);
     lv_obj_add_event_cb(s_scan_btn, scan_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *scan_l = lv_label_create(s_scan_btn);
     lv_label_set_text(scan_l, LV_SYMBOL_REFRESH " Scan");

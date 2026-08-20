@@ -113,21 +113,21 @@ static void hex_toggle_cb(lv_event_t *e)
 {
     (void)e;
     s_hex_mode = !s_hex_mode;
-    lv_obj_set_style_bg_color(s_hex_toggle, s_hex_mode ? THEME_COLOR_ACCENT : THEME_COLOR_SURFACE_HI, 0);
+    theme_set_toggle_active(s_hex_toggle, s_hex_mode);
 }
 
 static void autoscroll_toggle_cb(lv_event_t *e)
 {
     (void)e;
     s_autoscroll = !s_autoscroll;
-    lv_obj_set_style_bg_color(s_autoscroll_toggle, s_autoscroll ? THEME_COLOR_ACCENT : THEME_COLOR_SURFACE_HI, 0);
+    theme_set_toggle_active(s_autoscroll_toggle, s_autoscroll);
 }
 
 static void timestamp_toggle_cb(lv_event_t *e)
 {
     (void)e;
     s_timestamp = !s_timestamp;
-    lv_obj_set_style_bg_color(s_timestamp_toggle, s_timestamp ? THEME_COLOR_ACCENT : THEME_COLOR_SURFACE_HI, 0);
+    theme_set_toggle_active(s_timestamp_toggle, s_timestamp);
 }
 
 static void clear_btn_cb(lv_event_t *e)
@@ -242,22 +242,22 @@ static lv_obj_t *serial_screen_create(void)
     lv_obj_set_style_pad_column(toggle_row, 8, 0);
 
     s_hex_toggle = lv_btn_create(toggle_row);
-    lv_obj_set_style_bg_color(s_hex_toggle, THEME_COLOR_SURFACE_HI, 0);
+    theme_apply_toggle(s_hex_toggle, s_hex_mode);
     lv_obj_add_event_cb(s_hex_toggle, hex_toggle_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *hex_l = lv_label_create(s_hex_toggle); lv_label_set_text(hex_l, "HEX");
 
     s_autoscroll_toggle = lv_btn_create(toggle_row);
-    lv_obj_set_style_bg_color(s_autoscroll_toggle, THEME_COLOR_ACCENT, 0);
+    theme_apply_toggle(s_autoscroll_toggle, s_autoscroll);
     lv_obj_add_event_cb(s_autoscroll_toggle, autoscroll_toggle_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *as_l = lv_label_create(s_autoscroll_toggle); lv_label_set_text(as_l, "Autoscroll");
 
     s_timestamp_toggle = lv_btn_create(toggle_row);
-    lv_obj_set_style_bg_color(s_timestamp_toggle, THEME_COLOR_SURFACE_HI, 0);
+    theme_apply_toggle(s_timestamp_toggle, s_timestamp);
     lv_obj_add_event_cb(s_timestamp_toggle, timestamp_toggle_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *ts_l = lv_label_create(s_timestamp_toggle); lv_label_set_text(ts_l, "Timestamp");
 
     lv_obj_t *clear_btn = lv_btn_create(toggle_row);
-    lv_obj_set_style_bg_color(clear_btn, THEME_COLOR_WARNING, 0);
+    theme_apply_button(clear_btn, THEME_BTN_WARNING);
     lv_obj_add_event_cb(clear_btn, clear_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *clear_l = lv_label_create(clear_btn); lv_label_set_text(clear_l, "Clear");
 

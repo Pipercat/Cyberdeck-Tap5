@@ -120,20 +120,30 @@ static void selftest_btn_cb(lv_event_t *e)
         lv_obj_set_style_text_color(name, THEME_COLOR_TEXT, 0);
 
         const char *status_str;
-        lv_color_t color;
+        theme_status_t chip_status;
         switch (results[i].status) {
-            case SELF_TEST_PASS: status_str = "PASS"; color = THEME_COLOR_SUCCESS; break;
-            case SELF_TEST_FAIL: status_str = "FAIL"; color = THEME_COLOR_DANGER; break;
-            case SELF_TEST_SKIPPED: status_str = "SKIPPED"; color = THEME_COLOR_WARNING; break;
-            default: status_str = "N/A"; color = THEME_COLOR_TEXT_DIM; break;
+            case SELF_TEST_PASS: status_str = "PASS"; chip_status = THEME_STATUS_SUCCESS; break;
+            case SELF_TEST_FAIL: status_str = "FAIL"; chip_status = THEME_STATUS_DANGER; break;
+            case SELF_TEST_SKIPPED: status_str = "SKIPPED"; chip_status = THEME_STATUS_WARNING; break;
+            default: status_str = "N/A"; chip_status = THEME_STATUS_NEUTRAL; break;
         }
-        lv_obj_t *status = lv_label_create(row);
+
+        lv_obj_t *result_group = lv_obj_create(row);
+        lv_obj_remove_style_all(result_group);
+        lv_obj_set_size(result_group, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+        lv_obj_set_flex_flow(result_group, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_align(result_group, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+        lv_obj_set_style_pad_column(result_group, 8, 0);
+
+        lv_obj_t *chip = lv_label_create(result_group);
+        lv_label_set_text(chip, status_str);
+        theme_apply_status_chip(chip, chip_status);
+
         if (results[i].detail != NULL) {
-            lv_label_set_text_fmt(status, "%s (%s)", status_str, results[i].detail);
-        } else {
-            lv_label_set_text(status, status_str);
+            lv_obj_t *detail = lv_label_create(result_group);
+            lv_label_set_text(detail, results[i].detail);
+            lv_obj_set_style_text_color(detail, THEME_COLOR_TEXT_DIM, 0);
         }
-        lv_obj_set_style_text_color(status, color, 0);
     }
     open_modal("Self Test");
 }
@@ -209,15 +219,17 @@ static lv_obj_t *system_screen_create(void)
     lv_obj_set_style_pad_row(action_row, 10, 0);
 
     lv_obj_t *logs_btn = lv_btn_create(action_row);
+    theme_apply_button(logs_btn, THEME_BTN_NEUTRAL);
     lv_obj_add_event_cb(logs_btn, logs_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *logs_l = lv_label_create(logs_btn); lv_label_set_text(logs_l, "Logs");
 
     lv_obj_t *selftest_btn = lv_btn_create(action_row);
+    theme_apply_button(selftest_btn, THEME_BTN_NEUTRAL);
     lv_obj_add_event_cb(selftest_btn, selftest_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *st_l = lv_label_create(selftest_btn); lv_label_set_text(st_l, "Self Test");
 
     lv_obj_t *restart_btn = lv_btn_create(action_row);
-    lv_obj_set_style_bg_color(restart_btn, THEME_COLOR_DANGER, 0);
+    theme_apply_button(restart_btn, THEME_BTN_DANGER);
     lv_obj_add_event_cb(restart_btn, restart_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *restart_l = lv_label_create(restart_btn); lv_label_set_text(restart_l, LV_SYMBOL_POWER " Restart");
 

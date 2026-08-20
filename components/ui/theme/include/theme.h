@@ -13,6 +13,7 @@
  */
 #pragma once
 
+#include <stdbool.h>
 #include "lvgl.h"
 
 #ifdef __cplusplus
@@ -46,6 +47,22 @@ extern "C" {
 #define THEME_FONT_BODY  (&lv_font_montserrat_20)  // normaler Screen-Text, Buttons
 #define THEME_FONT_TITLE (&lv_font_montserrat_24)  // Screen-/Karten-Ueberschriften
 
+typedef enum {
+    THEME_BTN_PRIMARY,
+    THEME_BTN_SUCCESS,
+    THEME_BTN_WARNING,
+    THEME_BTN_DANGER,
+    THEME_BTN_NEUTRAL,
+} theme_button_variant_t;
+
+typedef enum {
+    THEME_STATUS_SUCCESS,
+    THEME_STATUS_WARNING,
+    THEME_STATUS_DANGER,
+    THEME_STATUS_INFO,
+    THEME_STATUS_NEUTRAL,
+} theme_status_t;
+
 // Initialisiert wiederverwendbare lv_style_t-Objekte. Einmalig vor dem
 // ersten Bildschirmaufbau aufrufen.
 void theme_init(void);
@@ -59,6 +76,11 @@ void theme_apply_screen(lv_obj_t *obj);
 
 // Wendet THEME_FONT_TITLE + Textfarbe auf ein Titel-/Ueberschriften-Label an.
 void theme_apply_title(lv_obj_t *label);
+
+void theme_apply_button(lv_obj_t *btn, theme_button_variant_t variant);
+void theme_apply_toggle(lv_obj_t *btn, bool active);
+void theme_set_toggle_active(lv_obj_t *btn, bool active);
+void theme_apply_status_chip(lv_obj_t *label, theme_status_t status);
 
 #ifdef __cplusplus
 }
