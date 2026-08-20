@@ -3,7 +3,7 @@
 #include "nav.h"
 #include "theme.h"
 #include "pin_table.h"
-#include "back_button.h"
+#include "screen_header.h"
 #include "lvgl.h"
 #include <stdio.h>
 #include <string.h>
@@ -183,16 +183,7 @@ static lv_obj_t *serial_screen_create(void)
     lv_obj_set_flex_flow(scr, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_pad_row(scr, 8, 0);
 
-    lv_obj_t *header = lv_obj_create(scr);
-    lv_obj_remove_style_all(header);
-    lv_obj_set_size(header, LV_PCT(100), 40);
-    lv_obj_set_flex_flow(header, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(header, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_t *title = lv_label_create(header);
-    lv_label_set_text(title, "Serial Terminal");
-    theme_apply_title(title);
-
-    s_back_btn = back_button_create(scr, back_cb);
+    s_back_btn = screen_header_create(scr, "Serial Terminal", back_cb);
 
     // --- Steuerzeile 1: Pins + Baud + Start/Stop ---
     lv_obj_t *ctrl_row = lv_obj_create(scr);
