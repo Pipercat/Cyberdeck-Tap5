@@ -23,8 +23,7 @@ extern "C" {
 // --- Farbpalette (Dark Digital Engineering, Nutzervorgabe 2026-08-20) ---
 // Bewusst ueberwiegend Schwarz/Anthrazit/Weiss/Grau - Farbe zeigt Bedeutung
 // und Status, nicht Dekoration ("Farben sparsam einsetzen").
-#define THEME_COLOR_BG         lv_color_hex(0x05080d)   // App-Hintergrund (tiefstes Schwarz)
-#define THEME_COLOR_BG_ALT     lv_color_hex(0x0b111a)   // Screen-Hintergrund (leicht angehoben)
+#define THEME_COLOR_BG         lv_color_hex(0x05080d)   // App-Hintergrund - einheitlich auf allen Screens
 #define THEME_COLOR_SURFACE    lv_color_hex(0x0d141e)   // Karten/Panels
 #define THEME_COLOR_SURFACE_HI lv_color_hex(0x101923)   // Karten, gedrueckt/hover/aktive Nav
 #define THEME_COLOR_BORDER     lv_color_hex(0x1c2530)

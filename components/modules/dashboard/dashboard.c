@@ -65,7 +65,6 @@ static lv_obj_t *dashboard_create(void)
 {
     lv_obj_t *scr = lv_obj_create(NULL);
     theme_apply_screen(scr);
-    lv_obj_set_style_bg_color(scr, THEME_COLOR_BG_ALT, 0);
     lv_obj_set_style_pad_all(scr, 20, 0);
     lv_obj_set_style_pad_top(scr, THEME_SCREEN_PAD_TOP, 0);
     lv_obj_set_style_pad_bottom(scr, BOTTOM_NAV_HEIGHT + 16, 0);
