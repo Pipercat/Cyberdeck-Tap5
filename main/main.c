@@ -1,5 +1,8 @@
 #include <inttypes.h>
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/timers.h"
+#include "esp_heap_caps.h"
 #include "board_init.h"
 #include "settings.h"
 #include "log_sink.h"
@@ -23,6 +26,60 @@
 static const char *TAG = "main";
 
 #define LOG_SINK_CAPACITY_BYTES (32 * 1024)
+
+// FIX (esp_hosted/TCM boot-crash, siehe docs/hardware_reference.md -
+// Abschnitt "esp_hosted / Binary Layout Boot Crash"):
+//
+// FreeRTOS erzeugt seinen Timer-Service-Task lazy beim allerersten
+// Software-Timer-Gebrauch. ESP-IDFs vApplicationGetTimerTaskMemory()
+// alloziert TCB/Stack dafuer via pvPortMalloc() (MALLOC_CAP_INTERNAL|
+// MALLOC_CAP_8BIT). Auf dem ESP32-P4 ist TCM (7 KB, siehe soc_memory_types[]
+// in esp-idf/components/heap/port/esp32p4/memory_layout.c) mit genau dieser
+// Capability-Kombination als Fallback-Pool eingetragen - landet die
+// Allokation dort, lehnt FreeRTOS' eigener Zeiger-Gueltigkeitscheck
+// (xPortCheckValidTCBMem/xPortcheckValidStackMem, siehe heap_idf.c) sie ab,
+// weil esp_ptr_internal() TCM-Adressen NICHT als internes RAM erkennt -
+// Boot-Crash, reproduzierbar auf echter Hardware verifiziert (siehe Doku).
+//
+// esp_hosteds eigener Konstruktor (unpriorisiert, siehe
+// esp_hosted_host_init.c) loest ueber add_esp_wifi_remote_channels()/
+// rpc_register_event_callbacks() typischerweise die ERSTE Timer-Nutzung im
+// gesamten Boot aus - und damit genau diese fragile Allokation.
+//
+// Erster Fix-Versuch (Timer-Task per priorisiertem Konstruktor VOR
+// esp_hosted erzwingen, in der Annahme "frueher = weniger fragmentiert")
+// hat NICHT funktioniert: es landete weiterhin ein Puffer in TCM (beim
+// ersten Versuch der TCB, danach der Stack) - TCM wird also unabhaengig vom
+// Zeitpunkt fuer Allokationen dieser Groessenordnung herangezogen, nicht nur
+// bei hoher Fragmentierung. Siehe docs/hardware_reference.md fuer Details.
+//
+// Tatsaechlicher Fix: TCM komplett und dauerhaft belegen, BEVOR irgendeine
+// andere Allokation stattfinden kann (Konstruktor-Prioritaet 101, die
+// niedrigste vom Nutzer erlaubte Zahl - laeuft vor esp_hosteds
+// unpriorisiertem Konstruktor). Der reservierte Block wird nie freigegeben.
+// Damit hat der Heap-Allocator fuer MALLOC_CAP_INTERNAL-Anfragen (die TCM
+// als Fallback mit einschliessen, siehe soc_memory_types[] in
+// esp-idf/components/heap/port/esp32p4/memory_layout.c) schlicht keinen
+// TCM-Platz mehr zur Auswahl und muss auf den grossen Haupt-SRAM-Pool
+// ausweichen - unabhaengig von Allokationsgroesse/-zeitpunkt/Fragmentierung.
+// TCM wird sonst im Projekt nirgends genutzt, der Verlust der 7 KB ist ein
+// bewusster, dokumentierter Kompromiss.
+static void __attribute__((constructor(101))) reserve_tcm_to_avoid_esp_hosted_crash(void)
+{
+    size_t tcm_free = heap_caps_get_free_size(MALLOC_CAP_TCM);
+    if (tcm_free > 0) {
+        // Kleiner Sicherheitsabstand fuer Allocator-Overhead/Alignment -
+        // ein paar Byte TCM-Rest sind unkritisch, solange keine Allokation
+        // in der Groessenordnung von TCB/Timer-Stack mehr hineinpasst.
+        void *reserved = heap_caps_malloc(tcm_free > 64 ? tcm_free - 64 : tcm_free, MALLOC_CAP_TCM);
+        (void)reserved;  // absichtlich nie freigegeben
+    }
+
+    TimerHandle_t warmup = xTimerCreate("warmup", pdMS_TO_TICKS(1), pdFALSE, NULL, NULL);
+    if (warmup != NULL) {
+        xTimerDelete(warmup, 0);
+    }
+}
 
 // Speist die persistente Statusleiste mit echten Werten (RAM/Akku/Wi-Fi),
 // soweit bereits verfuegbar. Server/USB-Target/SD bleiben "--", bis die

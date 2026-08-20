@@ -1,0 +1,35 @@
+Executing action: size
+Running ninja in directory /Users/marvinmayer/Cyberdeck-Tap5-main/build
+Executing "ninja all"...
+[1/4] cd /Users/marvinmayer/Cyberdeck-Tap5-main/build/esp-idf/esptool_py && /Users/marvinmayer/.espressif/python_env/idf5.4_py3.12_env/bin/python /Users/marvinmayer/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /Users/marvinmayer/Cyberdeck-Tap5-main/build/partition_table/partition-table.bin /Users/marvinmayer/Cyberdeck-Tap5-main/build/cyberdeck_tab5.bin
+cyberdeck_tab5.bin binary size 0x1013f0 bytes. Smallest app partition is 0x600000 bytes. 0x4fec10 bytes (83%) free.
+[2/4] Performing build step for 'bootloader'
+[1/1] cd /Users/marvinmayer/Cyberdeck-Tap5-main/build/bootloader/esp-idf/esptool_py && /Users/marvinmayer/.espressif/python_env/idf5.4_py3.12_env/bin/python /Users/marvinmayer/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x2000 /Users/marvinmayer/Cyberdeck-Tap5-main/build/bootloader/bootloader.bin
+Bootloader binary size 0x5700 bytes. 0x900 bytes (9%) free.
+[3/4] No install step for 'bootloader'
+[4/4] Completed 'bootloader'
+Running ninja in directory /Users/marvinmayer/Cyberdeck-Tap5-main/build
+Executing "ninja size"...
+[0/1] cd /Users/marvinmayer/Cyberdeck-Tap5-main/build && /opt/homebrew/bin/cmake -D "IDF_SIZE_TOOL=/Users/marvinmayer/.espressif/python_env/idf5.4_py3.12_env/bin/python;-m;esp_idf_size" -D MAP_FILE=/Users/marvinmayer/Cyberdeck-Tap5-main/build/cyberdeck_tab5.map -D OUTPUT_JSON= -P /Users/marvinmayer/esp/esp-idf/tools/cmake/run_size_tool.cmake
+                            Memory Type Usage Summary                             
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃ Memory Type/Section ┃ Used [bytes] ┃ Used [%] ┃ Remain [bytes] ┃ Total [bytes] ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ Flash               │       965870 │          │                │               │
+│    .text            │       700738 │          │                │               │
+│    .rodata          │       264604 │          │                │               │
+│    .init_array      │          272 │          │                │               │
+│    .appdesc         │          256 │          │                │               │
+│ DIRAM               │       174911 │    30.34 │         401553 │        576464 │
+│    .bss             │        87364 │    15.16 │                │               │
+│    .text            │        74466 │    12.92 │                │               │
+│    .data            │        13081 │     2.27 │                │               │
+│ HP core RAM         │          104 │     1.27 │           8088 │          8192 │
+│    .data            │           60 │     0.73 │                │               │
+│    .text            │           44 │     0.54 │                │               │
+│ LP RAM              │           52 │     0.16 │          32716 │         32768 │
+│    .force_fast      │           28 │     0.09 │                │               │
+│    .rtc_reserved    │           24 │     0.07 │                │               │
+└─────────────────────┴──────────────┴──────────┴────────────────┴───────────────┘
+Total image size: 1053277 bytes (.bin may be padded larger)
+Note: The reported total sizes may be smaller than those in the technical reference manual due to reserved memory and application configuration. The total flash size available for the application is not included by default, as it cannot be reliably determined due to the presence of other data like the bootloader, partition table, and application partition size.

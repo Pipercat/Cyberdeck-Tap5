@@ -293,22 +293,155 @@ zeigte den Crash zuverlaessig). Neue Features/Refactorings sollten deshalb
 vor dem "fertig"-Status mindestens 3x per Reset (nicht Neuflash - Neuflash
 allein reicht als Test nicht) auf dem Geraet verifiziert werden.
 
-Naechste Schritte fuer die spaetere Debugging-Session (verschaerft
-gegenueber oben):
-1. Linker-Map (`build/cyberdeck_tab5.map`) eines sauber bootenden und eines
-   crashenden Builds vergleichen - welche Symboladressen/-groessen
-   verschieben sich, insbesondere alles unter `esp_hosted`/`transport`/
-   `H_API` und der FreeRTOS-Task-Erzeugung selbst.
-2. `RA`-Register aus dem Crash-Dump (z.B. `0x4ff0936a`, `MEPC 0x4ff00d2c`)
-   per `riscv32-esp-elf-addr2line -e build/cyberdeck_tab5.elf` gegen das
-   ELF des jeweiligen crashenden Builds aufloesen, um die exakte
-   Aufruferfunktion zu identifizieren (nicht in dieser Session gemacht -
-   das crashende Binary wurde vor der Analyse bereits durch den
-   Wiederherstellungs-Build ueberschrieben).
-3. Espressif/esp_hosted-Issue-Tracker gezielt nach "xTaskCreateStaticPinnedToCore"
-   + "esp_hosted" + "esp32p4" durchsuchen - das Muster (fragil gegenueber
-   Binary-Layout, vor app_main()) wirkt wie ein bekannter Klasse-von-Bugs statt
-   ein projektspezifisches Problem.
+### Root Cause gefunden und behoben (2026-08-20, Branch `debug/esp-hosted-layout-crash`)
+
+**Symptome:** siehe oben - reproduzierbarer Boot-Crash-Loop, ausgeloest von
+praktisch jeder Code-Aenderung unabhaengig von Groesse/Art (SD-Karte,
+SPIFFS+vfs, reines LVGL-Styling ohne vfs), immer INNERHALB von esp_hosteds
+frueher Initialisierung, vor `app_main()`:
+```
+assert failed: xTaskCreateStaticPinnedToCore
+freertos_tasks_c_additions.h:300 (xPortCheckValidTCBMem(pxTaskBuffer))
+```
+(gelegentlich auch `freertos_tasks_c_additions.h:299
+xPortcheckValidStackMem` - selbe Ursache, nur TCB- statt Stack-Zeiger
+betroffen.)
+
+**Widerlegte Theorien** (siehe oben fuer Details):
+- SD-Karte/SDMMC-spezifischer Konflikt mit esp_hosteds SDIO-Transport -
+  widerlegt durch denselben Crash mit reinem SPIFFS (kein SDMMC beteiligt).
+- `vfs`-Komponente allgemein als Ausloeser - widerlegt durch denselben Crash
+  mit einem rein kosmetischen Design-System-Diff ganz ohne `vfs`.
+- Generelles Groessenwachstum von `.bss` als Ausloeser - widerlegt durch
+  gezielte Minimal-Reproducer (siehe unten): 1 KB und 8 KB reines `.bss` in
+  `main.c` sowie 8 ungenutzte `lv_style_t` in `theme.c` loesten den Crash
+  NICHT aus, obwohl der urspruengliche Design-System-Diff (aehnliche
+  Groessenordnung) ihn zuverlaessig ausloeste - erst die vollstaendige
+  Kombination aller fuenf urspruenglich geaenderten Dateien reproduzierte
+  ihn wieder zuverlaessig (3/3).
+- Heap-Korruption - widerlegt durch `heap_caps_check_integrity_all()` an
+  fuenf Checkpoints rund um `esp_hosted_init()` (siehe Minimal-Reproducer):
+  Heap durchgehend `heap_ok=1`, auch unmittelbar vor dem Crash.
+- NULL-Rueckgabe von `pvPortMalloc()` (also normale Out-of-Memory-Situation)
+  - widerlegt: `CONFIG_OPTIMIZATION_ASSERTIONS_ENABLED=y` ist gesetzt, der
+  vorgelagerte `assert(pxTCBBufferTemp != NULL)` in ESP-IDFs
+  `port_common.c` haette bei NULL zuerst (mit anderer Fehlermeldung)
+  ausgeloest.
+
+**Root Cause (durch direkte Pointer-Diagnose in
+`vApplicationGetTimerTaskMemory()`, ESP-IDF `port_common.c`, bewiesen):**
+
+FreeRTOS erzeugt seinen Timer-Service-Task lazy beim allerersten
+Software-Timer-Gebrauch im gesamten Boot - typischerweise ausgeloest durch
+esp_hosteds eigenen (unpriorisierten `__attribute__((constructor))`-
+basierten, siehe `esp_hosted_host_init.c`) Init-Pfad ueber
+`rpc_register_event_callbacks()`. ESP-IDFs `vApplicationGetTimerTaskMemory()`
+(`esp-idf/components/freertos/port_common.c:72`) alloziert TCB und Stack
+dafuer per `pvPortMalloc()`, also `heap_caps_malloc(size,
+MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)` - trotz des FreeRTOS-API-Namens
+"static memory" also tatsaechlich eine Heap-Allokation.
+
+Auf dem ESP32-P4 ist **TCM** (Tightly-Coupled Memory, 7 KB, siehe
+`esp-idf/components/heap/port/esp32p4/memory_layout.c`,
+`soc_memory_types[SOC_MEMORY_TYPE_TCM]`) als **Fallback-Pool genau fuer
+diese Capability-Kombination** (`MALLOC_CAP_INTERNAL`, Medium-Priority)
+eingetragen. Faellt die TLSF-Allokation fuer diese kleine Struktur
+(`sizeof(StaticTask_t)` bzw. `configTIMER_TASK_STACK_DEPTH`) auf den
+TCM-Pool zurueck, liefert sie einen technisch gueltigen, aber fuer diesen
+Zweck untauglichen Zeiger: `esp_ptr_internal()`
+(`esp-idf/components/esp_hw_support/include/esp_memory_utils.h:279`) prueft
+nur gegen `SOC_MEM_INTERNAL_LOW`/`HIGH` (und RTC-Speicher) - **TCM-Adressen
+werden dort nicht als "internal" erkannt**, obwohl memory_layout.c sie
+genau mit `MALLOC_CAP_INTERNAL` taggt. FreeRTOS' eigener
+Static-Task-Speichercheck (`xPortCheckValidTCBMem`/
+`xPortcheckValidStackMem`, `esp-idf/components/freertos/heap_idf.c:88`)
+lehnt den TCM-Zeiger deshalb ab -> Assert -> Boot-Crash.
+
+**Beweis (Minimal-Reproducer, direkte Pointer-Diagnose):**
+Instrumentierung von `vApplicationGetTimerTaskMemory()` zeigte im
+crashenden Zustand:
+```
+DIAG timer-task-mem: tcb=0x301001e8 (internal=0 accessible=0)
+                      stack=0x4ff3a700 (internal=1 accessible=1) ...
+```
+`0x301001e8` liegt exakt innerhalb des beim Boot gemeldeten TCM-Bereichs
+(`heap_init: At 30100068 len 00001F98 (7 KiB): TCM`, also
+`0x30100068`-`0x30102000`) - 384 Byte hinein. Der TCB landete in TCM, der
+Stack im normalen internen SRAM.
+
+**Warum die Empfindlichkeit gegenueber praktisch jeder Code-Aenderung?**
+Ob diese eine kleine, fruehe Allokation vom TLSF-Allocator aus dem
+7-KB-TCM-Pool oder dem ~460-KB-Haupt-SRAM-Pool bedient wird, haengt vom
+genauen Frei-Speicher-/Fragmentierungszustand zum exakten Allokations-
+zeitpunkt ab - und damit von jeder vorherigen statischen/dynamischen
+Allokation im gesamten bisherigen Boot-Verlauf. Praktisch jede
+Code-Aenderung verschiebt diesen Zustand minimal und kann die
+Pool-Auswahl kippen. Wichtiger Gegenbeweis zur Hypothese "frueher =
+sicherer" (siehe Fix-Historie unten): Ein erster Fix-Versuch, den
+Timer-Task per priorisiertem Konstruktor VOR esp_hosted zu erzwingen,
+verhinderte den Crash NICHT, sondern verschob nur, welcher der beiden
+Puffer (TCB oder Stack) in TCM landete - TCM wird also nicht nur bei
+hoher Fragmentierung, sondern unter recht normalen fruehen
+Bootbedingungen ebenfalls herangezogen.
+
+**Fix** (`main/main.c`, Funktion `reserve_tcm_to_avoid_esp_hosted_crash`):
+TCM vollstaendig und dauerhaft belegen, bevor irgendeine andere Allokation
+stattfinden kann - per Konstruktor mit Prioritaet 101 (niedrigste vom
+Nutzer erlaubte Zahl, laeuft vor esp_hosteds unpriorisiertem Konstruktor).
+Danach hat der Allocator fuer `MALLOC_CAP_INTERNAL`-Anfragen schlicht
+keinen TCM-Platz mehr zur Auswahl und muss auf den Haupt-SRAM-Pool
+ausweichen - unabhaengig von Allokationsgroesse, -zeitpunkt oder
+Fragmentierungszustand. TCM wird sonst im Projekt nirgends genutzt; der
+dauerhafte Verlust von 7 KB TCM ist ein bewusster, dokumentierter
+Kompromiss. Zusaetzlich erzwingt derselbe Konstruktor die
+Timer-Task-Erzeugung selbst (per Wegwerf-Timer), damit sie kontrolliert
+und fruehzeitig unter den jetzt garantiert TCM-freien Bedingungen
+stattfindet.
+
+**Boot-Test-Ergebnisse:**
+- Ohne Fix (voller urspruenglicher Design-System-Diff): 0/3 sauber (3/3
+  Crash, siehe oben).
+- Fix-Versuch 1 (Timer-Task frueh erzwingen, ohne TCM-Reservierung): 0/10
+  sauber (10/10 Crash - Stack landete in TCM statt TCB).
+- Fix-Versuch 2 (TCM-Reservierung, mit Diagnose-Instrumentierung): 10/10
+  sauber, TCB und Stack beide ausserhalb TCM (`0x4ff3a8ac` bzw.
+  `0x50108380`, beide `internal=1 accessible=1`).
+- Finaler Fix (TCM-Reservierung, Diagnose-Instrumentierung entfernt,
+  sauberer Build wie er tatsaechlich ausgeliefert wird): **10/10 sauber**,
+  zusaetzlich 1x echter Power-Cycle (USB-Kabel gezogen/wieder gesteckt,
+  nicht nur Soft-Reset) sauber gebootet.
+
+**Verbleibende Risiken:**
+- Der Fix behandelt das Symptom (TCM aus dem generischen
+  `MALLOC_CAP_INTERNAL`-Pool herausnehmen), nicht die zugrunde liegende
+  ESP-IDF-Inkonsistenz zwischen `memory_layout.c`s Capability-Tagging und
+  `esp_ptr_internal()`s Adressbereichspruefung selbst - das ist ein
+  Espressif-seitiger Bug/Designluecke fuer ESP32-P4, nicht im Projekt
+  behebbar. Ein Upstream-Report bei Espressif/ESP-IDF waere sinnvoll
+  (in dieser Session nicht mehr gemacht - noch offen).
+- Sollte irgendein anderer Codepfad im Projekt oder in einer Abhaengigkeit
+  gezielt `MALLOC_CAP_TCM` anfordern (aktuell nirgends der Fall, gezielt
+  geprueft: kein Treffer fuer `MALLOC_CAP_TCM` im Projekt- oder
+  managed_components-Code), wuerde die dauerhafte Reservierung dessen
+  Allokation fehlschlagen lassen - akzeptabel, da TCM sonst ungenutzt ist,
+  aber bei kuenftigen ESP-IDF-Komponenten-Updates gegenzupruefen.
+- Nicht bewiesen, aber plausibel: Aehnliche TCM-Fallback-Faelle koennten
+  theoretisch auch fuer ANDERE kleine fruehe `MALLOC_CAP_INTERNAL`-
+  Allokationen (nicht nur den Timer-Task) auftreten. Da der Fix TCM
+  generell (nicht nur fuer den Timer-Task) blockiert, sollte das
+  Restrisiko dadurch mit abgedeckt sein - aber nicht einzeln verifiziert.
+- Zehn Resets + ein Power-Cycle sind ein starkes, aber kein absolutes
+  Signal (der urspruengliche SPIFFS-Crash war beim allerersten Boot nach
+  dem Flashen unauffaellig und zeigte sich erst beim zweiten Reset
+  zuverlaessig). Weiterhin gilt: jede kuenftige Code-Aenderung sollte vor
+  "fertig" mehrfach per Reset auf echter Hardware verifiziert werden
+  (jetzt mit deutlich hoeherer Grundzuversicht, da die Pool-Auswahl fuer
+  diese eine fragile Allokation jetzt strukturell erzwungen statt vom
+  Zufall abhaengig ist).
+
+Damit ist der P0-Blocker aus Sicht dieser Session geloest. Naechste Schritte
+laut Auftrag: Merge-Kandidat pruefen (Nutzer-Entscheidung, nicht automatisch
+mergen), danach P0-UI-Arbeit (Design-System/Dashboard/Iconset) fortsetzen.
 
 ## Nicht verifizierte/gesperrte Bereiche (bewusst, siehe pin_table.h)
 
