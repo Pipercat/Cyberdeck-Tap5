@@ -2,7 +2,12 @@
 #include "nav.h"
 #include "theme.h"
 #include "module_card.h"
+#include "pin_table.h"
+#include "gpio_module.h"
+#include "serial_module.h"
+#include "wifi_module.h"
 #include "lvgl.h"
+#include <stdio.h>
 
 typedef struct {
     const char *symbol;
@@ -68,6 +73,68 @@ static void module_card_click_cb(lv_event_t *e)
 {
     nav_screen_id_t target = (nav_screen_id_t)(intptr_t)lv_event_get_user_data(e);
     nav_show(target);
+}
+
+// Live-Status auf den Dashboard-Karten (Nutzerfeedback: Karten sollten
+// selbst schon ein Diagnoseinstrument sein statt nur Icon+Titel zu zeigen).
+// Bewusst nur fuer Module mit bereits vorhandenen, guenstig abfragbaren
+// Live-Werten - keine neuen Modul-APIs nur fuer diese Anzeige geschaffen.
+static lv_obj_t *s_serial_card = NULL;
+static lv_obj_t *s_network_card = NULL;
+static lv_obj_t *s_gpio_card = NULL;
+static lv_timer_t *s_refresh_timer = NULL;
+
+static void refresh_live_status(lv_timer_t *timer)
+{
+    (void)timer;
+
+    if (s_serial_card != NULL) {
+        bool running = serial_module_is_running();
+        module_card_set_status(s_serial_card, running ? "RUNNING" : "Idle",
+                                running ? THEME_COLOR_SUCCESS : THEME_COLOR_TEXT_DIM);
+    }
+
+    if (s_network_card != NULL) {
+        wifi_module_state_t state = wifi_module_get_state();
+        char buf[48];
+        if (state == WIFI_MODULE_STATE_CONNECTED) {
+            char ip[16] = "?";
+            wifi_module_get_ip_str(ip, sizeof(ip));
+            snprintf(buf, sizeof(buf), "%s, %d dBm", ip, wifi_module_get_rssi());
+            module_card_set_status(s_network_card, buf, THEME_COLOR_SUCCESS);
+        } else if (state == WIFI_MODULE_STATE_CONNECTING) {
+            module_card_set_status(s_network_card, "Verbinde...", THEME_COLOR_WARNING);
+        } else {
+            module_card_set_status(s_network_card, "Getrennt", THEME_COLOR_TEXT_DIM);
+        }
+    }
+
+    if (s_gpio_card != NULL) {
+        int active = 0;
+        for (size_t i = 0; i < g_pin_table_count; i++) {
+            if (g_pin_table[i].role == PIN_ROLE_FREE &&
+                gpio_module_get_mode(g_pin_table[i].gpio_num) != GPIO_MODULE_MODE_UNCONFIGURED) {
+                active++;
+            }
+        }
+        char buf[24];
+        if (active > 0) {
+            snprintf(buf, sizeof(buf), "%d aktiv", active);
+            module_card_set_status(s_gpio_card, buf, THEME_COLOR_SUCCESS);
+        } else {
+            module_card_set_status(s_gpio_card, "Frei", THEME_COLOR_TEXT_DIM);
+        }
+    }
+}
+
+static void dashboard_on_show(void)
+{
+    if (s_refresh_timer == NULL) {
+        s_refresh_timer = lv_timer_create(refresh_live_status, 2000, NULL);
+        refresh_live_status(NULL);  // sofort fuellen statt 2s auf den ersten Tick zu warten
+    } else {
+        lv_timer_resume(s_refresh_timer);
+    }
 }
 
 // Quick Actions (Architektur-Plan Abschnitt 7): direkte Sprungmarken zu den
@@ -166,6 +233,10 @@ static lv_obj_t *dashboard_create(void)
             lv_obj_t *card = module_card_create(row, m->symbol, m->title, status,
                                                  on_click, (void *)(intptr_t)m->target);
             lv_obj_set_size(card, LV_PCT(31), CARD_HEIGHT);
+
+            if (m->target == NAV_SCREEN_SERIAL) s_serial_card = card;
+            else if (m->target == NAV_SCREEN_NETWORK) s_network_card = card;
+            else if (m->target == NAV_SCREEN_GPIO) s_gpio_card = card;
         }
     }
 
@@ -175,4 +246,5 @@ static lv_obj_t *dashboard_create(void)
 void dashboard_register(void)
 {
     nav_register(NAV_SCREEN_DASHBOARD, dashboard_create);
+    nav_register_on_show(NAV_SCREEN_DASHBOARD, dashboard_on_show);
 }

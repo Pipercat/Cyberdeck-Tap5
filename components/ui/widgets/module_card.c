@@ -24,11 +24,17 @@ lv_obj_t *module_card_create(lv_obj_t *parent, const char *symbol, const char *t
     lv_label_set_text(title_label, title);
     theme_apply_title(title_label);
 
-    if (status_text != NULL) {
-        lv_obj_t *status_label = lv_label_create(card);
-        lv_label_set_text(status_label, status_text);
+    // Statuszeile wird auch ohne initialen Text angelegt, wenn die Karte
+    // klickbar ist (= ein echtes Modul, kein "Coming Soon") - so kann
+    // module_card_set_status() spaeter Live-Werte eintragen, ohne die
+    // Kartenstruktur nachtraeglich aendern zu muessen.
+    lv_obj_t *status_label = NULL;
+    if (status_text != NULL || on_click != NULL) {
+        status_label = lv_label_create(card);
+        lv_label_set_text(status_label, status_text != NULL ? status_text : "");
         lv_obj_set_style_text_color(status_label, THEME_COLOR_TEXT_DIM, 0);
     }
+    lv_obj_set_user_data(card, status_label);
 
     if (on_click != NULL) {
         lv_obj_add_flag(card, LV_OBJ_FLAG_CLICKABLE);
@@ -38,4 +44,14 @@ lv_obj_t *module_card_create(lv_obj_t *parent, const char *symbol, const char *t
     }
 
     return card;
+}
+
+void module_card_set_status(lv_obj_t *card, const char *status_text, lv_color_t color)
+{
+    lv_obj_t *status_label = (lv_obj_t *)lv_obj_get_user_data(card);
+    if (status_label == NULL) {
+        return;
+    }
+    lv_label_set_text(status_label, status_text);
+    lv_obj_set_style_text_color(status_label, color, 0);
 }

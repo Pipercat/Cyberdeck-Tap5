@@ -16,6 +16,12 @@ extern "C" {
 lv_obj_t *module_card_create(lv_obj_t *parent, const char *symbol, const char *title,
                               const char *status_text, lv_event_cb_t on_click, void *user_data);
 
+// Aktualisiert die Statuszeile einer bereits erstellten Karte nachtraeglich
+// (fuer Live-Werte, die sich nach dem Erstellen aendern - z.B. Serial-
+// Laufstatus, Netzwerk-IP/RSSI). Ohne Wirkung auf Karten ohne Klick-Handler
+// (deaktivierte "Coming Soon"-Karten behalten ihren statischen Text).
+void module_card_set_status(lv_obj_t *card, const char *status_text, lv_color_t color);
+
 #ifdef __cplusplus
 }
 #endif
