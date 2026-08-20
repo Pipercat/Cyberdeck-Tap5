@@ -8,33 +8,61 @@ typedef struct {
     const char *symbol;
     const char *title;
     nav_screen_id_t target;
-    bool implemented;  // steuert die Karten-Unterschrift, siehe dashboard_create()
+    bool implemented;  // steuert Karten-Unterschrift UND Klickbarkeit, siehe dashboard_create()
 } module_entry_t;
 
-// Modul-Grid gemaess Architektur-Plan Abschnitt 7. Reihenfolge wie in der
-// Nutzeranforderung 3 (Flash, GPIO, Serial, I2C, SPI, PWM, ADC/Scope,
-// Sensors, Camera, Audio, Network, Files, Projects, System, Settings).
+typedef struct {
+    const char *label;
+    const module_entry_t *modules;
+    size_t count;
+} module_group_t;
+
 // "implemented" muss beim Fertigstellen eines Moduls hier mit umgestellt
 // werden - sonst zeigt die Karte weiter "Coming Soon" trotz funktionierender
 // Unterseite (auf echter Hardware als Bug gemeldet, siehe Git-Historie).
-static const module_entry_t k_modules[] = {
-    { LV_SYMBOL_DOWNLOAD, "Flash",       NAV_SCREEN_FLASH,   false },
-    { LV_SYMBOL_SHUFFLE,  "GPIO",        NAV_SCREEN_GPIO,    true  },
-    { LV_SYMBOL_KEYBOARD, "Serial",      NAV_SCREEN_SERIAL,  true  },
-    { LV_SYMBOL_LIST,     "I2C Scanner", NAV_SCREEN_I2C,     true  },
-    { LV_SYMBOL_LIST,     "SPI Tools",   NAV_SCREEN_SPI,     false },
-    { LV_SYMBOL_LOOP,     "PWM",         NAV_SCREEN_PWM,     true  },
-    { LV_SYMBOL_IMAGE,    "ADC / Scope", NAV_SCREEN_ADC,     true  },
-    { LV_SYMBOL_EYE_OPEN, "Sensors",     NAV_SCREEN_SENSORS, true  },
-    { LV_SYMBOL_VIDEO,    "Camera",      NAV_SCREEN_CAMERA,  false },
-    { LV_SYMBOL_VOLUME_MAX,"Audio",      NAV_SCREEN_AUDIO,   true  },
-    { LV_SYMBOL_WIFI,     "Network",     NAV_SCREEN_NETWORK, true  },
-    { LV_SYMBOL_DIRECTORY,"Files",       NAV_SCREEN_FILES,   false },
-    { LV_SYMBOL_COPY,     "Projects",    NAV_SCREEN_PROJECTS,false },
-    { LV_SYMBOL_SETTINGS, "System",      NAV_SCREEN_SYSTEM,  true  },
-    { LV_SYMBOL_SETTINGS, "Settings",    NAV_SCREEN_SETTINGS,true  },
+//
+// In thematische Gruppen sortiert statt einem einzigen 15-Kachel-Raster
+// (Nutzerfeedback: wirkte wie ein generisches Admin-Dashboard, keine
+// erkennbare Prioritaet zwischen z.B. GPIO und Settings).
+static const module_entry_t k_group_target[] = {
+    { LV_SYMBOL_DOWNLOAD,  "Flash",    NAV_SCREEN_FLASH,    false },
+    { LV_SYMBOL_KEYBOARD,  "Serial",   NAV_SCREEN_SERIAL,   true  },
+    { LV_SYMBOL_DIRECTORY, "Files",    NAV_SCREEN_FILES,    false },
+    { LV_SYMBOL_COPY,      "Projects", NAV_SCREEN_PROJECTS, false },
 };
-#define MODULE_COUNT (sizeof(k_modules) / sizeof(k_modules[0]))
+static const module_entry_t k_group_electronics[] = {
+    { LV_SYMBOL_SHUFFLE, "GPIO",        NAV_SCREEN_GPIO, true },
+    { LV_SYMBOL_LOOP,    "PWM",         NAV_SCREEN_PWM,  true },
+    { LV_SYMBOL_IMAGE,   "ADC / Scope", NAV_SCREEN_ADC,  true },
+};
+static const module_entry_t k_group_bus[] = {
+    { LV_SYMBOL_LIST, "I2C Scanner", NAV_SCREEN_I2C, true  },
+    { LV_SYMBOL_LIST, "SPI Tools",   NAV_SCREEN_SPI, false },
+};
+static const module_entry_t k_group_media[] = {
+    { LV_SYMBOL_VIDEO,      "Camera", NAV_SCREEN_CAMERA, false },
+    { LV_SYMBOL_VOLUME_MAX, "Audio",  NAV_SCREEN_AUDIO,  true  },
+};
+static const module_entry_t k_group_device[] = {
+    { LV_SYMBOL_EYE_OPEN, "Sensors", NAV_SCREEN_SENSORS, true },
+    { LV_SYMBOL_WIFI,     "Network", NAV_SCREEN_NETWORK, true },
+};
+static const module_entry_t k_group_system[] = {
+    { LV_SYMBOL_SETTINGS, "System",   NAV_SCREEN_SYSTEM,   true },
+    { LV_SYMBOL_SETTINGS, "Settings", NAV_SCREEN_SETTINGS, true },
+};
+
+static const module_group_t k_groups[] = {
+    { "TARGET",       k_group_target,      sizeof(k_group_target) / sizeof(k_group_target[0]) },
+    { "ELECTRONICS",  k_group_electronics, sizeof(k_group_electronics) / sizeof(k_group_electronics[0]) },
+    { "BUS ANALYZER", k_group_bus,         sizeof(k_group_bus) / sizeof(k_group_bus[0]) },
+    { "MEDIA",        k_group_media,       sizeof(k_group_media) / sizeof(k_group_media[0]) },
+    { "DEVICE",       k_group_device,      sizeof(k_group_device) / sizeof(k_group_device[0]) },
+    { "SYSTEM",       k_group_system,      sizeof(k_group_system) / sizeof(k_group_system[0]) },
+};
+#define GROUP_COUNT (sizeof(k_groups) / sizeof(k_groups[0]))
+
+#define CARD_HEIGHT 108
 
 static void module_card_click_cb(lv_event_t *e)
 {
@@ -65,9 +93,6 @@ static void quick_action_click_cb(lv_event_t *e)
     nav_screen_id_t target = (nav_screen_id_t)(intptr_t)lv_event_get_user_data(e);
     nav_show(target);
 }
-
-#define GRID_COLUMNS 3
-#define GRID_ROWS    ((MODULE_COUNT + GRID_COLUMNS - 1) / GRID_COLUMNS)
 
 static lv_obj_t *dashboard_create(void)
 {
@@ -107,34 +132,41 @@ static lv_obj_t *dashboard_create(void)
         lv_label_set_text(label, k_quick_actions[i].label);
     }
 
-    // --- Modul-Grid: Karten werden per LV_GRID_FR(1) dynamisch auf Breite/
-    // Hoehe des verbleibenden Platzes gestreckt, damit keine grossen
-    // Freiflaechen entstehen. ---
-    lv_obj_t *grid = lv_obj_create(scr);
-    lv_obj_remove_style_all(grid);
-    lv_obj_set_width(grid, LV_PCT(100));
-    lv_obj_set_flex_grow(grid, 1);
-    lv_obj_set_style_pad_row(grid, 12, 0);
-    lv_obj_set_style_pad_column(grid, 12, 0);
-    lv_obj_clear_flag(grid, LV_OBJ_FLAG_SCROLLABLE);
+    // --- Modul-Gruppen: eigene Ueberschrift je Themenbereich statt einem
+    // einzigen 15-Kachel-Raster ohne erkennbare Prioritaet. Scrollbar, da
+    // Ueberschriften+Zeilenumbrueche mehr Platz brauchen als das alte
+    // Fill-Height-Raster. ---
+    lv_obj_t *groups_area = lv_obj_create(scr);
+    lv_obj_remove_style_all(groups_area);
+    lv_obj_set_width(groups_area, LV_PCT(100));
+    lv_obj_set_flex_grow(groups_area, 1);
+    lv_obj_set_flex_flow(groups_area, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_row(groups_area, 14, 0);
 
-    static int32_t col_dsc[GRID_COLUMNS + 1];
-    static int32_t row_dsc[GRID_ROWS + 1];
-    for (int i = 0; i < GRID_COLUMNS; i++) col_dsc[i] = LV_GRID_FR(1);
-    col_dsc[GRID_COLUMNS] = LV_GRID_TEMPLATE_LAST;
-    for (int i = 0; i < GRID_ROWS; i++) row_dsc[i] = LV_GRID_FR(1);
-    row_dsc[GRID_ROWS] = LV_GRID_TEMPLATE_LAST;
+    for (size_t g = 0; g < GROUP_COUNT; g++) {
+        const module_group_t *group = &k_groups[g];
 
-    lv_obj_set_grid_dsc_array(grid, col_dsc, row_dsc);
-    lv_obj_set_layout(grid, LV_LAYOUT_GRID);
+        lv_obj_t *header = lv_label_create(groups_area);
+        lv_label_set_text(header, group->label);
+        lv_obj_set_style_text_color(header, THEME_COLOR_TEXT_DIM, 0);
+        lv_obj_set_style_text_letter_space(header, 1, 0);
 
-    for (size_t i = 0; i < MODULE_COUNT; i++) {
-        const char *status = k_modules[i].implemented ? NULL : "Coming Soon";
-        lv_obj_t *card = module_card_create(grid, k_modules[i].symbol, k_modules[i].title, status,
-                                             module_card_click_cb, (void *)(intptr_t)k_modules[i].target);
-        int col = i % GRID_COLUMNS;
-        int row = i / GRID_COLUMNS;
-        lv_obj_set_grid_cell(card, LV_GRID_ALIGN_STRETCH, col, 1, LV_GRID_ALIGN_STRETCH, row, 1);
+        lv_obj_t *row = lv_obj_create(groups_area);
+        lv_obj_remove_style_all(row);
+        lv_obj_set_width(row, LV_PCT(100));
+        lv_obj_set_height(row, LV_SIZE_CONTENT);
+        lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW_WRAP);
+        lv_obj_set_style_pad_row(row, 10, 0);
+        lv_obj_set_style_pad_column(row, 10, 0);
+
+        for (size_t i = 0; i < group->count; i++) {
+            const module_entry_t *m = &group->modules[i];
+            const char *status = m->implemented ? NULL : "Coming Soon";
+            lv_event_cb_t on_click = m->implemented ? module_card_click_cb : NULL;
+            lv_obj_t *card = module_card_create(row, m->symbol, m->title, status,
+                                                 on_click, (void *)(intptr_t)m->target);
+            lv_obj_set_size(card, LV_PCT(31), CARD_HEIGHT);
+        }
     }
 
     return scr;
