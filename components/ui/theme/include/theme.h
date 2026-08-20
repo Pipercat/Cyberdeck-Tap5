@@ -20,21 +20,25 @@
 extern "C" {
 #endif
 
-// --- Farbpalette (Dark-Mode-first) ---
-#define THEME_COLOR_BG        lv_color_hex(0x0d1117)   // App-Hintergrund
-#define THEME_COLOR_SURFACE   lv_color_hex(0x161b22)   // Karten/Panels
-#define THEME_COLOR_SURFACE_HI lv_color_hex(0x21262d)  // Karten, gedrueckt/hover
-#define THEME_COLOR_BORDER    lv_color_hex(0x30363d)
-#define THEME_COLOR_TEXT      lv_color_hex(0xe6edf3)
-#define THEME_COLOR_TEXT_DIM  lv_color_hex(0x8b949e)
-#define THEME_COLOR_ACCENT    lv_color_hex(0x2f81f7)   // Primaerakzent (Aktionen, Fokus)
-#define THEME_COLOR_SUCCESS   lv_color_hex(0x3fb950)
-#define THEME_COLOR_WARNING   lv_color_hex(0xd29922)
-#define THEME_COLOR_DANGER    lv_color_hex(0xf85149)
+// --- Farbpalette (Dark Digital Engineering, Nutzervorgabe 2026-08-20) ---
+// Bewusst ueberwiegend Schwarz/Anthrazit/Weiss/Grau - Farbe zeigt Bedeutung
+// und Status, nicht Dekoration ("Farben sparsam einsetzen").
+#define THEME_COLOR_BG         lv_color_hex(0x05080d)   // App-Hintergrund (tiefstes Schwarz)
+#define THEME_COLOR_BG_ALT     lv_color_hex(0x0b111a)   // Screen-Hintergrund (leicht angehoben)
+#define THEME_COLOR_SURFACE    lv_color_hex(0x0d141e)   // Karten/Panels
+#define THEME_COLOR_SURFACE_HI lv_color_hex(0x101923)   // Karten, gedrueckt/hover/aktive Nav
+#define THEME_COLOR_BORDER     lv_color_hex(0x1c2530)
+#define THEME_COLOR_TEXT       lv_color_hex(0xe6edf3)
+#define THEME_COLOR_TEXT_DIM   lv_color_hex(0x8b949e)
+#define THEME_COLOR_ACCENT     lv_color_hex(0x22d3ee)   // Electric Cyan - Primaerakzent (Aktionen, Fokus)
+#define THEME_COLOR_SUCCESS    lv_color_hex(0x34d399)   // Grün - OK/Connected
+#define THEME_COLOR_WARNING    lv_color_hex(0xf59e0b)   // Orange - Warning
+#define THEME_COLOR_DANGER     lv_color_hex(0xef4444)   // Rot - Error
+#define THEME_COLOR_PURPLE     lv_color_hex(0xa78bfa)   // Spezielle Tools / Serial / Debug
 
 // --- Layout-Konstanten ---
-#define THEME_RADIUS_CARD     10
-#define THEME_PAD_CARD        12
+#define THEME_RADIUS_CARD     18   // 14-20px Vorgabe
+#define THEME_PAD_CARD        16
 #define THEME_TOUCH_TARGET_MIN 64   // Mindestgroesse fuer Touch-Ziele in px
 
 // Freiraum, den jeder Screen oben reservieren muss, damit die persistente

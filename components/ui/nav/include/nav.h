@@ -33,6 +33,11 @@ typedef enum {
     NAV_SCREEN_PROJECTS,
     NAV_SCREEN_SYSTEM,
     NAV_SCREEN_SETTINGS,
+    // Kategorie-Zwischenscreens (Redesign 2026-08-20): buendeln je 2
+    // Werkzeuge, damit HOME bei max. 6 Kacheln bleibt (Nutzervorgabe).
+    NAV_SCREEN_BUS,     // I2C Scanner + SPI Tools
+    NAV_SCREEN_SCOPE,   // ADC/Scope + PWM/Servo
+    NAV_SCREEN_MEDIA,   // Audio + Camera
     NAV_SCREEN_COUNT,
 } nav_screen_id_t;
 

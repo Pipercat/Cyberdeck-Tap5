@@ -2,6 +2,7 @@
 #include "theme.h"
 #include "statusbar.h"
 #include "back_button.h"
+#include "bottom_nav.h"
 #include "esp_log.h"
 
 static const char *TAG = "nav";
@@ -23,7 +24,22 @@ static const char *k_screen_titles[NAV_SCREEN_COUNT] = {
     [NAV_SCREEN_PROJECTS]  = "Projects",
     [NAV_SCREEN_SYSTEM]    = "System",
     [NAV_SCREEN_SETTINGS]  = "Settings",
+    [NAV_SCREEN_BUS]       = "Bus",
+    [NAV_SCREEN_SCOPE]     = "Scope",
+    [NAV_SCREEN_MEDIA]     = "Media",
 };
+
+// Die 5 Bottom-Nav-Ziele (siehe bottom_nav.h fuer die Begruendung, warum
+// hier int statt nav_screen_id_t verwendet wird - Vermeidung einer
+// zirkulaeren Komponentenabhaengigkeit).
+static const bottom_nav_item_t k_bottom_nav_items[] = {
+    { LV_SYMBOL_HOME,      "HOME",     (int)NAV_SCREEN_DASHBOARD },
+    { LV_SYMBOL_DIRECTORY, "FILES",    (int)NAV_SCREEN_FILES },
+    { LV_SYMBOL_COPY,      "PROJECTS", (int)NAV_SCREEN_PROJECTS },
+    { LV_SYMBOL_LIST,      "SYSTEM",   (int)NAV_SCREEN_SYSTEM },
+    { LV_SYMBOL_SETTINGS,  "SETTINGS", (int)NAV_SCREEN_SETTINGS },
+};
+#define BOTTOM_NAV_ITEM_COUNT (sizeof(k_bottom_nav_items) / sizeof(k_bottom_nav_items[0]))
 
 static nav_screen_create_fn_t s_create_fns[NAV_SCREEN_COUNT];
 static nav_screen_show_fn_t s_on_show_fns[NAV_SCREEN_COUNT];
@@ -32,7 +48,26 @@ static nav_screen_id_t s_current = NAV_SCREEN_DASHBOARD;
 
 static void back_button_cb(lv_event_t *e)
 {
+    (void)e;
     nav_show(NAV_SCREEN_DASHBOARD);
+}
+
+static void bottom_nav_navigate_wrapper(int screen_id)
+{
+    nav_show((nav_screen_id_t)screen_id);
+}
+
+// true fuer die 5 Screens, die ueber die Bottom-Navigation statt einen
+// schwebenden Zurueck-Button erreicht werden (siehe bottom_nav.h) - ein
+// Screen bekommt nie beide Navigationsmechanismen gleichzeitig.
+static bool is_bottom_nav_target(nav_screen_id_t id)
+{
+    for (size_t i = 0; i < BOTTOM_NAV_ITEM_COUNT; i++) {
+        if (k_bottom_nav_items[i].screen_id == (int)id) {
+            return true;
+        }
+    }
+    return false;
 }
 
 static lv_obj_t *create_placeholder_screen_for(nav_screen_id_t id)
@@ -51,7 +86,12 @@ static lv_obj_t *create_placeholder_screen_for(nav_screen_id_t id)
     lv_label_set_text(subtitle, "Coming Soon - spaetere Phase");
     lv_obj_set_style_text_color(subtitle, THEME_COLOR_TEXT_DIM, 0);
 
-    back_button_create(scr, back_button_cb);
+    if (is_bottom_nav_target(id)) {
+        lv_obj_set_style_pad_bottom(scr, BOTTOM_NAV_HEIGHT + 10, 0);
+    } else {
+        lv_obj_set_style_pad_bottom(scr, 74, 0);
+        back_button_create(scr, back_button_cb);
+    }
 
     return scr;
 }
@@ -60,6 +100,8 @@ void nav_init(void)
 {
     theme_init();
     statusbar_create(lv_layer_top());
+    bottom_nav_create(lv_layer_top(), k_bottom_nav_items, BOTTOM_NAV_ITEM_COUNT);
+    bottom_nav_set_navigate_fn(bottom_nav_navigate_wrapper);
     ESP_LOGI(TAG, "Navigation initialisiert");
 }
 
@@ -98,5 +140,6 @@ void nav_show(nav_screen_id_t id)
     }
 
     s_current = id;
+    bottom_nav_update((int)id);
     lv_screen_load_anim(s_screens[id], LV_SCR_LOAD_ANIM_FADE_IN, 150, 0, false);
 }

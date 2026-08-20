@@ -1,12 +1,13 @@
 /**
- * statusbar.h - Persistente obere Statusleiste (Nutzeranforderung 3):
- * Wi-Fi | Server | USB | Target | SD | CPU | RAM | Akku | Uhrzeit
+ * statusbar.h - Persistente obere Statusleiste, bewusst kompakt (Nutzer-
+ * vorgabe 2026-08-20: "nur die wichtigsten Informationen"):
+ * CYBERDECK | Wi-Fi | Server | USB+Target | Akku | Uhrzeit
  *
- * Phase 1: Statische Platzhalterwerte, siehe statusbar.c. Ab Phase 2/4
- * werden die statusbar_set_*()-Funktionen von den jeweiligen Modulen
- * (network_tools, system, flash, files) periodisch mit echten Werten
- * gefuettert - die Statusleiste selbst bleibt reine Anzeige ohne eigene
- * Hardwarezugriffe (Trennung UI/HAL, siehe Architektur Abschnitt 4).
+ * CPU/RAM/SD wurden bewusst entfernt (zu dicht fuer eine staendig
+ * sichtbare Leiste) - stehen weiterhin im System-Screen zur Verfuegung.
+ * Die statusbar_set_*()-Funktionen werden von den jeweiligen Modulen
+ * periodisch mit echten Werten gefuettert - die Statusleiste selbst bleibt
+ * reine Anzeige ohne eigene Hardwarezugriffe (Trennung UI/HAL).
  */
 #pragma once
 
@@ -23,9 +24,6 @@ lv_obj_t *statusbar_create(lv_obj_t *parent);
 void statusbar_set_wifi(int rssi_dbm, bool connected);
 void statusbar_set_server(bool connected);
 void statusbar_set_usb_target(const char *target_name); // NULL = kein Target
-void statusbar_set_sd_present(bool present);
-void statusbar_set_cpu_percent(uint8_t percent);
-void statusbar_set_ram_percent(uint8_t percent);
 
 // Zeigt die reale INA226-Busspannung (siehe system_module.c) - bewusst KEIN
 // geschaetzter Prozentwert, da die Entladekurve der NP-F550-Zelle nicht

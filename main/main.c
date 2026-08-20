@@ -81,13 +81,14 @@ static void __attribute__((constructor(101))) reserve_tcm_to_avoid_esp_hosted_cr
     }
 }
 
-// Speist die persistente Statusleiste mit echten Werten (RAM/Akku/Wi-Fi),
-// soweit bereits verfuegbar. Server/USB-Target/SD bleiben "--", bis die
+// Speist die persistente Statusleiste mit echten Werten (Akku/Wi-Fi),
+// soweit bereits verfuegbar. Server/USB-Target bleiben "--", bis die
 // jeweiligen Module (Phase 5) existieren - bewusst keine erfundenen
 // Platzhalterwerte. Wi-Fi bleibt "--", bis der Nutzer den Network-Screen
 // mindestens einmal geoeffnet hat (wifi_module_init() laeuft dort bewusst
 // lazy, nicht beim Boot - SDIO-Bring-up zum C6 ist eine potenziell riskante
-// Hardware-Operation, siehe docs/hardware_reference.md).
+// Hardware-Operation, siehe docs/hardware_reference.md). RAM/CPU nicht mehr
+// hier (kompakte Statusleiste, Nutzervorgabe) - weiterhin im System-Screen.
 static void statusbar_refresh_timer_cb(lv_timer_t *timer)
 {
     (void)timer;
@@ -95,9 +96,6 @@ static void statusbar_refresh_timer_cb(lv_timer_t *timer)
     if (system_module_get_stats(&stats) != ESP_OK) {
         return;
     }
-    uint8_t ram_pct = stats.heap_total_bytes
-        ? (uint8_t)((100 * (stats.heap_total_bytes - stats.heap_free_bytes)) / stats.heap_total_bytes) : 0;
-    statusbar_set_ram_percent(ram_pct);
     statusbar_set_battery_voltage(stats.battery_voltage_v, stats.battery_voltage_v >= 0.0f);
     statusbar_set_wifi(wifi_module_get_rssi(), wifi_module_get_state() == WIFI_MODULE_STATE_CONNECTED);
 }

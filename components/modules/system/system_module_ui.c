@@ -4,14 +4,13 @@
 #include "log_sink.h"
 #include "nav.h"
 #include "theme.h"
-#include "screen_header.h"
+#include "bottom_nav.h"
 #include "lvgl.h"
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
 
 static lv_obj_t *s_stats_label = NULL;
-static lv_obj_t *s_back_btn = NULL;
 static lv_obj_t *s_modal = NULL;
 static lv_obj_t *s_modal_title = NULL;
 static lv_obj_t *s_modal_body = NULL;
@@ -173,28 +172,20 @@ static void restart_btn_cb(lv_event_t *e)
     lv_obj_add_event_cb(btn_confirm, restart_confirm_event_cb, LV_EVENT_CLICKED, mbox);
 }
 
-static void back_cb(lv_event_t *e)
-{
-    (void)e;
-    if (s_refresh_timer) lv_timer_pause(s_refresh_timer);
-    if (s_modal) {
-        lv_obj_add_flag(s_modal, LV_OBJ_FLAG_HIDDEN);  // sonst bleibt das Modal beim naechsten Aufruf offen
-    }
-    nav_show(NAV_SCREEN_DASHBOARD);
-}
-
 static lv_obj_t *system_screen_create(void)
 {
     lv_obj_t *scr = lv_obj_create(NULL);
     theme_apply_screen(scr);
     lv_obj_set_style_pad_all(scr, 16, 0);
     lv_obj_set_style_pad_top(scr, THEME_SCREEN_PAD_TOP, 0);   // ueberschreibt pad_all nur oben
-    lv_obj_set_style_pad_bottom(scr, 74, 0);  // Platz fuer den schwebenden Zurueck-Button
-    lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);  // sonst verschiebt Scrollen den schwebenden Zurueck-Button
+    lv_obj_set_style_pad_bottom(scr, BOTTOM_NAV_HEIGHT + 16, 0);  // Platz fuer die Bottom-Nav (Top-Level-Screen, kein Zurueck-Button)
+    lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_flex_flow(scr, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_pad_row(scr, 12, 0);
 
-    s_back_btn = screen_header_create(scr, "System Monitor", back_cb);
+    lv_obj_t *title = lv_label_create(scr);
+    lv_label_set_text(title, "System Monitor");
+    theme_apply_title(title);
 
     lv_obj_t *stats_card = lv_obj_create(scr);
     theme_apply_card(stats_card);
@@ -255,15 +246,18 @@ static lv_obj_t *system_screen_create(void)
     lv_obj_remove_style_all(s_modal_body);
     lv_obj_set_size(s_modal_body, LV_PCT(100), LV_PCT(90));
 
-    // Modal wird zuletzt angelegt und liegt damit im Z-Order ueber dem
-    // Zurueck-Button - ohne dies waere der Button bei offenem Modal verdeckt.
-    lv_obj_move_foreground(s_back_btn);
-
     return scr;
 }
 
 static void system_on_show(void)
 {
+    // Defensiv statt ueber einen Zurueck-Button-Handler: Top-Level-Screens
+    // werden ueber die Bottom-Nav verlassen, die keinen Cleanup-Hook pro
+    // Screen kennt - also das Modal beim (Wieder-)Betreten sicher schliessen,
+    // egal wie der Screen zuletzt verlassen wurde.
+    if (s_modal) {
+        lv_obj_add_flag(s_modal, LV_OBJ_FLAG_HIDDEN);
+    }
     if (s_refresh_timer == NULL) {
         s_refresh_timer = lv_timer_create(refresh_timer_cb, 1000, NULL);
         refresh_timer_cb(NULL);

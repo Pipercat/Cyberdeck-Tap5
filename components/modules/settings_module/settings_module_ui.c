@@ -3,7 +3,7 @@
 #include "board_init.h"
 #include "nav.h"
 #include "theme.h"
-#include "screen_header.h"
+#include "bottom_nav.h"
 #include "lvgl.h"
 #include <stdio.h>
 #include <inttypes.h>
@@ -36,24 +36,20 @@ static void reset_defaults_cb(lv_event_t *e)
     lv_label_set_text_fmt(s_backlight_value_label, "%u%%", cfg->backlight_percent);
 }
 
-static void back_cb(lv_event_t *e)
-{
-    (void)e;
-    nav_show(NAV_SCREEN_DASHBOARD);
-}
-
 static lv_obj_t *settings_screen_create(void)
 {
     lv_obj_t *scr = lv_obj_create(NULL);
     theme_apply_screen(scr);
     lv_obj_set_style_pad_all(scr, 16, 0);
     lv_obj_set_style_pad_top(scr, THEME_SCREEN_PAD_TOP, 0);   // ueberschreibt pad_all nur oben
-    lv_obj_set_style_pad_bottom(scr, 74, 0);  // Platz fuer den schwebenden Zurueck-Button
-    lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);  // sonst verschiebt Scrollen den schwebenden Zurueck-Button
+    lv_obj_set_style_pad_bottom(scr, BOTTOM_NAV_HEIGHT + 16, 0);  // Platz fuer die Bottom-Nav (Top-Level-Screen, kein Zurueck-Button)
+    lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_flex_flow(scr, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_pad_row(scr, 20, 0);
 
-    screen_header_create(scr, "Settings", back_cb);
+    lv_obj_t *title = lv_label_create(scr);
+    lv_label_set_text(title, "Settings");
+    theme_apply_title(title);
 
     // --- Backlight ---
     lv_obj_t *bl_card = lv_obj_create(scr);
