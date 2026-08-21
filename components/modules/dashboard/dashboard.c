@@ -19,7 +19,7 @@ typedef struct {
 // verwandte Werkzeuge buendeln (siehe NAV_SCREEN_BUS/SCOPE/MEDIA), damit
 // trotzdem alle bestehenden Module erreichbar bleiben.
 static const module_entry_t k_home_tiles[] = {
-    { LV_SYMBOL_DOWNLOAD,   "FLASH",  "Firmware & Devices", NAV_SCREEN_FLASH,  false },
+    { LV_SYMBOL_DOWNLOAD,   "FLASH",  "Firmware & Devices", NAV_SCREEN_FLASH,  true  },
     { LV_SYMBOL_SHUFFLE,    "GPIO",   "Pin Control",        NAV_SCREEN_GPIO,   true  },
     { LV_SYMBOL_KEYBOARD,   "SERIAL", "Terminal",           NAV_SCREEN_SERIAL, true  },
     { LV_SYMBOL_LIST,       "BUS",    "I2C / SPI",          NAV_SCREEN_BUS,    true  },

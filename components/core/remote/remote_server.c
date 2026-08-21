@@ -10,11 +10,12 @@
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "esp_timer.h"
+#include "esp_flash.h"
+#include "esp_idf_version.h"
 #include "cJSON.h"
 
 #include "settings.h"
 #include "wifi_module.h"
-#include "system_module.h"
 #include "log_sink.h"
 #include "usb_device_manager.h"
 #include "flash_manager.h"
@@ -127,21 +128,24 @@ static esp_err_t read_body(httpd_req_t *req, char *buf, size_t buf_len, size_t *
 
 // --- /api/v1/system, /api/v1/network ---------------------------------------
 
+// Liest Heap/PSRAM/Flash/Uptime direkt ueber ESP-IDF-APIs statt ueber das
+// "system"-Modul, um keine zirkulaere Komponentenabhaengigkeit einzugehen
+// (system_module_ui.c zeigt umgekehrt Remote-/USB-/Flash-Status an, siehe
+// Abschnitt 20). Chip-Temperatur/Akkuspannung bleiben bewusst dem
+// On-Device-System-Monitor vorbehalten (deren Sensor-Handles sind
+// system_module-intern) - ueber diese REST-Schnittstelle nicht verfuegbar.
 static esp_err_t system_get_handler(httpd_req_t *req)
 {
     cJSON *root = remote_protocol_new_envelope();
-    system_module_stats_t stats;
-    if (system_module_get_stats(&stats) == ESP_OK) {
-        cJSON_AddNumberToObject(root, "uptime_s", (double)stats.uptime_s);
-        cJSON_AddNumberToObject(root, "heap_free", stats.heap_free_bytes);
-        cJSON_AddNumberToObject(root, "heap_total", stats.heap_total_bytes);
-        cJSON_AddNumberToObject(root, "psram_free", stats.psram_free_bytes);
-        cJSON_AddNumberToObject(root, "psram_total", stats.psram_total_bytes);
-        cJSON_AddNumberToObject(root, "flash_size", stats.flash_size_bytes);
-        cJSON_AddNumberToObject(root, "chip_temp_c", stats.chip_temp_c);
-        cJSON_AddNumberToObject(root, "battery_voltage_v", stats.battery_voltage_v);
-        cJSON_AddStringToObject(root, "idf_version", stats.idf_version);
-    }
+    cJSON_AddNumberToObject(root, "uptime_s", (double)(esp_timer_get_time() / 1000000));
+    cJSON_AddNumberToObject(root, "heap_free", heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+    cJSON_AddNumberToObject(root, "heap_total", heap_caps_get_total_size(MALLOC_CAP_INTERNAL));
+    cJSON_AddNumberToObject(root, "psram_free", heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+    cJSON_AddNumberToObject(root, "psram_total", heap_caps_get_total_size(MALLOC_CAP_SPIRAM));
+    uint32_t flash_size = 0;
+    esp_flash_get_size(NULL, &flash_size);
+    cJSON_AddNumberToObject(root, "flash_size", flash_size);
+    cJSON_AddStringToObject(root, "idf_version", esp_get_idf_version());
     cJSON_AddBoolToObject(root, "remote_access_enabled", settings_get()->remote_access_enabled);
     cJSON_AddBoolToObject(root, "require_pairing", settings_get()->remote_require_pairing);
     return send_json(req, root);
