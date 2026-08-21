@@ -85,15 +85,14 @@ static void __attribute__((constructor(101))) reserve_tcm_to_avoid_esp_hosted_cr
 }
 
 // Speist die persistente Statusleiste mit echten Werten (Akku/Wi-Fi/Server/
-// USB-Target). Wi-Fi bleibt "--", bis der Nutzer den Network-Screen
-// mindestens einmal geoeffnet hat (wifi_module_init() laeuft dort bewusst
-// lazy, nicht beim Boot - SDIO-Bring-up zum C6 ist eine potenziell riskante
-// Hardware-Operation, siehe docs/hardware_reference.md). Server/USB-Target
-// bleiben analog "aus"/leer, bis Remote Access aktiviert bzw. der Flash-
-// Screen/eine Remote-API-Anfrage den USB-Host lazy hochfaehrt (siehe
-// usb_host_manager.h) - beides rein lesende Statusabfragen hier, kein
-// eigener Hardwarezugriff. RAM/CPU nicht mehr hier (kompakte Statusleiste,
-// Nutzervorgabe) - weiterhin im System-Screen.
+// USB-Target). Wi-Fi initialisiert seit Boot (siehe app_main() - Nutzervorgabe:
+// automatische Wiederverbindung nach Power-Cycle) und verbindet automatisch,
+// falls zuvor schon einmal ein Netzwerk konfiguriert wurde. Server/USB-Target
+// bleiben "aus"/leer, bis Remote Access aktiviert bzw. der Flash-Screen/eine
+// Remote-API-Anfrage den USB-Host lazy hochfaehrt (siehe usb_host_manager.h)
+// - beides rein lesende Statusabfragen hier, kein eigener Hardwarezugriff.
+// RAM/CPU nicht mehr hier (kompakte Statusleiste, Nutzervorgabe) - weiterhin
+// im System-Screen.
 static void statusbar_refresh_timer_cb(lv_timer_t *timer)
 {
     (void)timer;
@@ -144,10 +143,22 @@ void app_main(void)
     lv_timer_create(statusbar_refresh_timer_cb, 3000, NULL);
     lvgl_port_unlock();
 
-    // Registriert nur den IP_EVENT-Handler fuer automatischen Server-Start
-    // (siehe remote_server.h) - startet NICHT selbst USB-Host/httpd/WLAN.
-    // Guenstig genug fuer einen unbedingten Boot-Aufruf, anders als
-    // wifi_module_init()/usb_host_manager_init() (siehe deren Header-Kommentare).
+    // Wi-Fi ab Boot statt erst beim ersten Oeffnen des Network-/Settings-
+    // Screens (Nutzervorgabe: automatische Wiederverbindung nach Power-Cycle,
+    // siehe wifi_module_init()-Kommentar zum Auto-Reconnect). Fehler hier
+    // sind nicht fatal (analog zur bisherigen Lazy-Init-Toleranz) - z.B. wenn
+    // noch nie eine Verbindung konfiguriert wurde oder der C6-SDIO-Link
+    // gerade nicht bereit ist. Muss vor remote_server_init() laufen: erst
+    // hier entsteht die Default-Event-Loop, auf der remote_server_init()
+    // seinen IP_EVENT-Handler registriert - vorher wuerde die Registrierung
+    // still fehlschlagen und der Server nie automatisch mit der IP starten.
+    esp_err_t wifi_err = wifi_module_init();
+    if (wifi_err != ESP_OK) {
+        ESP_LOGW(TAG, "wifi_module_init() beim Boot fehlgeschlagen (err=%d) - Network-Screen erneut versuchen", wifi_err);
+    }
+
+    // Registriert den IP_EVENT-Handler fuer automatischen Server-Start
+    // (siehe remote_server.h) - startet NICHT selbst httpd/USB-Host.
     remote_server_init();
 
     ESP_LOGI(TAG, "Dashboard angezeigt - Phase 1 Foundation bereit");

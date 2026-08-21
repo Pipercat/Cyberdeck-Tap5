@@ -77,6 +77,24 @@ esp_err_t wifi_module_init(void)
 
     s_initialized = true;
     ESP_LOGI(TAG, "Wi-Fi (STA, ueber ESP32-C6/SDIO) initialisiert");
+
+    // Auto-Reconnect nach Power-Cycle: esp_wifi_set_config() (siehe
+    // wifi_module_connect()) persistiert SSID/Passwort bereits selbststaendig
+    // in seinem eigenen NVS-Namespace (Default-Storage WIFI_STORAGE_FLASH,
+    // hier nie auf RAM umgestellt) - unsere App muss das Passwort dafuer
+    // nicht zusaetzlich in settings_t halten. esp_wifi_start() laedt dieses
+    // letzte Profil bereits in den Treiber, verbindet aber nicht von selbst.
+    wifi_config_t stored_cfg = {0};
+    if (esp_wifi_get_config(WIFI_IF_STA, &stored_cfg) == ESP_OK && stored_cfg.sta.ssid[0] != '\0') {
+        strncpy(s_connected_ssid, (const char *)stored_cfg.sta.ssid, sizeof(s_connected_ssid) - 1);
+        s_connected_ssid[sizeof(s_connected_ssid) - 1] = '\0';
+        s_state = WIFI_MODULE_STATE_CONNECTING;
+        esp_err_t connect_err = esp_wifi_connect();
+        if (connect_err != ESP_OK) {
+            ESP_LOGW(TAG, "Auto-Reconnect zu '%s' fehlgeschlagen (err=%d)", s_connected_ssid, connect_err);
+            s_state = WIFI_MODULE_STATE_FAILED;
+        }
+    }
     return ESP_OK;
 }
 

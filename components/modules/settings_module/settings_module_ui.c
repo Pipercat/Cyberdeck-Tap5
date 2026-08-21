@@ -15,6 +15,8 @@
 static lv_obj_t *s_backlight_slider = NULL;
 static lv_obj_t *s_backlight_value_label = NULL;
 
+static lv_obj_t *s_network_status_label = NULL;
+
 static lv_obj_t *s_remote_toggle = NULL;
 static lv_obj_t *s_pairing_toggle = NULL;
 static lv_obj_t *s_ip_label = NULL;
@@ -45,6 +47,39 @@ static void reset_defaults_cb(lv_event_t *e)
     board_set_backlight(cfg->backlight_percent);
     lv_slider_set_value(s_backlight_slider, cfg->backlight_percent, LV_ANIM_ON);
     lv_label_set_text_fmt(s_backlight_value_label, "%u%%", cfg->backlight_percent);
+}
+
+static void configure_wifi_cb(lv_event_t *e)
+{
+    (void)e;
+    nav_show(NAV_SCREEN_NETWORK);
+}
+
+static void refresh_network_status_label(void)
+{
+    char buf[96];
+    switch (wifi_module_get_state()) {
+    case WIFI_MODULE_STATE_CONNECTED: {
+        char ip[16] = "?";
+        wifi_module_get_ip_str(ip, sizeof(ip));
+        snprintf(buf, sizeof(buf), LV_SYMBOL_WIFI " %s  ·  %s", wifi_module_get_connected_ssid(), ip);
+        lv_obj_set_style_text_color(s_network_status_label, THEME_COLOR_SUCCESS, 0);
+        break;
+    }
+    case WIFI_MODULE_STATE_CONNECTING:
+        snprintf(buf, sizeof(buf), "Verbinde mit %s...", wifi_module_get_connected_ssid());
+        lv_obj_set_style_text_color(s_network_status_label, THEME_COLOR_WARNING, 0);
+        break;
+    case WIFI_MODULE_STATE_FAILED:
+        snprintf(buf, sizeof(buf), "Verbindung fehlgeschlagen");
+        lv_obj_set_style_text_color(s_network_status_label, THEME_COLOR_DANGER, 0);
+        break;
+    default:
+        snprintf(buf, sizeof(buf), "Nicht verbunden");
+        lv_obj_set_style_text_color(s_network_status_label, THEME_COLOR_TEXT_DIM, 0);
+        break;
+    }
+    lv_label_set_text(s_network_status_label, buf);
 }
 
 static void remote_toggle_cb(lv_event_t *e)
@@ -88,6 +123,8 @@ static void revoke_all_cb(lv_event_t *e)
 static void remote_refresh_timer_cb(lv_timer_t *timer)
 {
     (void)timer;
+    refresh_network_status_label();
+
     char ip[16] = "--";
     if (!wifi_module_get_ip_str(ip, sizeof(ip))) {
         strcpy(ip, "--");
@@ -164,6 +201,31 @@ static lv_obj_t *settings_screen_create(void)
     lv_obj_add_event_cb(reset_btn, reset_defaults_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *reset_l = lv_label_create(reset_btn);
     lv_label_set_text(reset_l, LV_SYMBOL_REFRESH " Zuruecksetzen");
+
+    // --- Network / Wi-Fi ---
+    lv_obj_t *net_card = lv_obj_create(scr);
+    theme_apply_card(net_card);
+    lv_obj_set_size(net_card, LV_PCT(100), LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(net_card, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_row(net_card, 8, 0);
+
+    lv_obj_t *net_title = lv_label_create(net_card);
+    lv_label_set_text(net_title, "NETWORK");
+    lv_obj_set_style_text_color(net_title, THEME_COLOR_TEXT_DIM, 0);
+
+    lv_obj_t *net_row = lv_obj_create(net_card);
+    lv_obj_remove_style_all(net_row);
+    lv_obj_set_size(net_row, LV_PCT(100), LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(net_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(net_row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    s_network_status_label = lv_label_create(net_row);
+    lv_label_set_text(s_network_status_label, "--");
+    lv_obj_t *net_btn = lv_btn_create(net_row);
+    theme_apply_button(net_btn, THEME_BTN_PRIMARY);
+    lv_obj_set_height(net_btn, THEME_TOUCH_TARGET_MIN);
+    lv_obj_add_event_cb(net_btn, configure_wifi_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *net_btn_l = lv_label_create(net_btn);
+    lv_label_set_text(net_btn_l, LV_SYMBOL_WIFI " Configure");
 
     // --- Remote Access (Nutzeranforderung 16) ---
     const settings_t *rcfg = settings_get();
