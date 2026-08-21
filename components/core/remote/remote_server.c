@@ -23,6 +23,7 @@
 #include "remote_auth.h"
 #include "remote_protocol.h"
 #include "remote_events.h"
+#include "storage.h"
 
 static const char *TAG = "REMOTE_SERVER";
 
@@ -483,6 +484,94 @@ static esp_err_t logs_get_handler(httpd_req_t *req)
     return httpd_resp_send(req, buf, n);
 }
 
+// --- /api/v1/files/* --------------------------------------------------------
+
+static esp_err_t files_get_handler(httpd_req_t *req)
+{
+    if (!require_auth(req)) return send_error(req, "401 Unauthorized", "auth_required", "Bearer-Token fehlt/ungueltig");
+    storage_init();
+
+    cJSON *root = remote_protocol_new_envelope();
+    size_t used = 0, total = 0;
+    if (storage_get_usage(&used, &total)) {
+        cJSON_AddNumberToObject(root, "used_bytes", (double)used);
+        cJSON_AddNumberToObject(root, "total_bytes", (double)total);
+    }
+
+    cJSON *files = cJSON_AddArrayToObject(root, "files");
+    storage_file_t list[32];
+    size_t n = storage_list_files(list, 32);
+    for (size_t i = 0; i < n; i++) {
+        cJSON *f = cJSON_CreateObject();
+        cJSON_AddStringToObject(f, "name", list[i].name);
+        cJSON_AddNumberToObject(f, "size", (double)list[i].size_bytes);
+        cJSON_AddItemToArray(files, f);
+    }
+    return send_json(req, root);
+}
+
+static esp_err_t files_download_get_handler(httpd_req_t *req)
+{
+    if (!require_auth(req)) return send_error(req, "401 Unauthorized", "auth_required", "Bearer-Token fehlt/ungueltig");
+    storage_init();
+
+    char name[STORAGE_MAX_NAME_LEN];
+    if (!query_param(req, "name", name, sizeof(name))) {
+        return send_error(req, "400 Bad Request", "missing_params", "Query-Parameter 'name' fehlt");
+    }
+    char path[sizeof(STORAGE_MOUNT_POINT) + STORAGE_MAX_NAME_LEN + 1];
+    if (!storage_build_path(name, path, sizeof(path))) {
+        return send_error(req, "400 Bad Request", "invalid_name", "Ungueltiger Dateiname");
+    }
+    FILE *f = fopen(path, "rb");
+    if (f == NULL) {
+        return send_error(req, "404 Not Found", "not_found", "Datei nicht gefunden");
+    }
+
+    add_cors_headers(req);
+    httpd_resp_set_type(req, "application/octet-stream");
+
+    static char chunk[1024];
+    size_t read_bytes;
+    esp_err_t err = ESP_OK;
+    while ((read_bytes = fread(chunk, 1, sizeof(chunk), f)) > 0) {
+        if (httpd_resp_send_chunk(req, chunk, read_bytes) != ESP_OK) {
+            err = ESP_FAIL;
+            break;
+        }
+    }
+    fclose(f);
+    if (err == ESP_OK) {
+        httpd_resp_send_chunk(req, NULL, 0);
+    }
+    return err;
+}
+
+static esp_err_t files_delete_post_handler(httpd_req_t *req)
+{
+    if (!require_auth(req)) return send_error(req, "401 Unauthorized", "auth_required", "Bearer-Token fehlt/ungueltig");
+    storage_init();
+
+    char body[256];
+    if (read_body(req, body, sizeof(body), NULL) != ESP_OK) {
+        return send_error(req, "400 Bad Request", "invalid_body", "Body zu gross/ungueltig");
+    }
+    cJSON *json = cJSON_Parse(body);
+    const cJSON *name = json ? cJSON_GetObjectItem(json, "name") : NULL;
+    if (!cJSON_IsString(name)) {
+        cJSON_Delete(json);
+        return send_error(req, "400 Bad Request", "invalid_body", "Feld 'name' fehlt/ungueltig");
+    }
+    esp_err_t err = storage_delete_file(name->valuestring);
+    cJSON_Delete(json);
+    if (err != ESP_OK) {
+        return send_error(req, "404 Not Found", "not_found", "Datei nicht gefunden");
+    }
+    cJSON *root = remote_protocol_new_envelope();
+    cJSON_AddBoolToObject(root, "ok", true);
+    return send_json(req, root);
+}
+
 // --- OPTIONS-Catch-All fuer CORS-Preflight ---------------------------------
 
 static esp_err_t options_handler(httpd_req_t *req)
@@ -655,6 +744,9 @@ esp_err_t remote_server_start(void)
         { .uri = "/api/v1/device/reset",      .method = HTTP_POST, .handler = device_reset_post_handler },
         { .uri = "/api/v1/device/bootloader", .method = HTTP_POST, .handler = device_bootloader_post_handler },
         { .uri = "/api/v1/logs",              .method = HTTP_GET,  .handler = logs_get_handler },
+        { .uri = "/api/v1/files",              .method = HTTP_GET,  .handler = files_get_handler },
+        { .uri = "/api/v1/files/download",     .method = HTTP_GET,  .handler = files_download_get_handler },
+        { .uri = "/api/v1/files/delete",       .method = HTTP_POST, .handler = files_delete_post_handler },
         { .uri = "/api/v1/ws",       .method = HTTP_GET, .handler = ws_handler,        .is_websocket = true },
         { .uri = "/api/v1/serial",   .method = HTTP_GET, .handler = serial_ws_handler, .is_websocket = true },
     };
