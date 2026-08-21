@@ -1,0 +1,160 @@
+/* CyberDeck Remote Web UI - matches the on-device dark engineering theme
+   (components/ui/theme/theme.h color tokens, duplicated here since this is
+   a standalone static page with no build step / shared source with the
+   firmware). */
+
+:root {
+    --bg: #05080d;
+    --surface: #0d141e;
+    --surface-hi: #101923;
+    --border: #1c2530;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --accent: #22d3ee;
+    --success: #34d399;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --purple: #a78bfa;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+}
+
+header.top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 20px;
+}
+
+header.top h1 {
+    font-size: 20px;
+    letter-spacing: 1px;
+    margin: 0;
+    color: var(--accent);
+}
+
+.status-line {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+section.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+}
+
+section.card h2 {
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin: 0 0 12px;
+    font-weight: 600;
+}
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+}
+
+.row + .row { border-top: 1px solid var(--border); }
+
+button, input[type="text"], input[type="password"], input[type="number"] {
+    font-family: inherit;
+    font-size: 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-hi);
+    color: var(--text);
+    padding: 10px 14px;
+}
+
+button {
+    cursor: pointer;
+    background: var(--accent);
+    color: #04141a;
+    font-weight: 600;
+    border: none;
+    min-height: 44px;
+}
+
+button.secondary { background: var(--surface-hi); color: var(--text); border: 1px solid var(--border); }
+button.danger { background: var(--danger); color: #200404; }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.chip {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+.chip.success { background: rgba(52,211,153,0.15); color: var(--success); }
+.chip.warning { background: rgba(245,158,11,0.15); color: var(--warning); }
+.chip.danger  { background: rgba(239,68,68,0.15); color: var(--danger); }
+.chip.info    { background: rgba(34,211,238,0.15); color: var(--accent); }
+.chip.neutral { background: rgba(139,148,158,0.15); color: var(--text-dim); }
+
+.progress-track {
+    width: 100%;
+    height: 12px;
+    background: var(--surface-hi);
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.2s ease;
+}
+
+.file-list { font-size: 13px; color: var(--text-dim); margin: 8px 0; }
+.file-list div { display: flex; justify-content: space-between; padding: 2px 0; }
+
+#terminal {
+    width: 100%;
+    height: 220px;
+    background: #000;
+    color: #b7f5c7;
+    font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 13px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    padding: 10px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.hidden { display: none !important; }
+
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+
+a { color: var(--accent); }
