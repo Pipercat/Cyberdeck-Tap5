@@ -135,8 +135,14 @@ Capabilities:
   `USB_CLIENT_TASK_PRIORITY` in `usb_host_manager.c`, aktuell 5) sind ein
   vernuenftiger Default, nicht auf echter Hardware gegen LVGL/esp_hosted-
   Lastszenarien feinabgestimmt.
-- Exakte `usb_host`/`cdc_acm_host`-API-Signaturen sind nach bestem
-  Trainingswissen geschrieben, aber in dieser Session **nicht gegen die
-  tatsaechlich installierten ESP-IDF-Header kompiliert** (kein Toolchain-
-  Zugriff, siehe Abschluss-Report) - vor dem ersten `idf.py build`
-  gegenpruefen.
+- Update (2026-08-21, Commit `c74bbb1`): der erste echte `idf.py build`
+  dieses Branches lief durch, **ohne** dass an `usb_host_manager.c`,
+  `usb_device_manager.c` oder `usb_serial.c` etwas geaendert werden
+  musste - die dort verwendeten `usb_host`/`cdc_acm_host`-API-Signaturen
+  scheinen also zu passen (aufgeloeste Version: `espressif/usb_host_cdc_acm`
+  2.1.x, siehe `dependencies.lock`). Zum Vergleich: `flash_target.c`
+  (esp-serial-flasher) musste nach demselben Build tatsaechlich portiert
+  werden (siehe `docs/remote_flashing.md`) - reiner Compile-Erfolg ist
+  also kein Beweis, dass hier alles laeuft, nur ein guter erster
+  Anhaltspunkt. Kein tatsaechliches USB-Geraet wurde bisher angeschlossen
+  getestet - das ist der naechste faellige Verifikationsschritt.

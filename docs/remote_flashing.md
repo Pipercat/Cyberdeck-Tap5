@@ -170,11 +170,25 @@ sanktionierte Alternative fuer genau diesen Fall (Nutzeranforderung 21:
 "Wenn das nicht stabil moeglich ist: Erstelle stattdessen einen kleinen
 separaten PC-Client").
 
+## Update (2026-08-21): esp_loader-Portierung korrigiert, Boot verifiziert
+
+Der erste echte `idf.py build` dieses Branches (Commit `c74bbb1`) zeigte,
+dass die urspruengliche `flash_target.c` gegen ein aelteres
+esp-serial-flasher-Porting-Modell geschrieben war (globale
+`loader_port_*()`-Funktionen). Die tatsaechlich aufgeloeste Version
+(`espressif/esp-serial-flasher` **2.0.0**, siehe `dependencies.lock`)
+nutzt stattdessen ein vtable-basiertes `esp_loader_port_ops_t` mit
+`esp_loader_t*`/`esp_loader_port_t`-Handles - `flash_target.c` wurde
+entsprechend portiert. Boot/Wi-Fi-Reconnect/Remote-Server-Autostart sind
+seitdem auf echter Tab5-Hardware verifiziert (siehe README). Ein
+vollstaendiger Flash-Zyklus gegen ein angeschlossenes Ziel-ESP-Board steht
+weiterhin aus - das ist der naechste Verifikationsschritt.
+
 ## Nicht verifizierte/offene Punkte
 
-- Exakte esp_loader.h-API-Signaturen (Funktionsnamen/Parameter) sind nach
-  bestem Trainingswissen geschrieben, nicht gegen die installierte
-  esp-serial-flasher-Version kompiliert (siehe Abschluss-Report).
+- Ein vollstaendiger Flash-Zyklus (USB-Ziel erkennen, Bootloader-Sync,
+  Schreiben/Verify, Reset in neue Firmware) ist noch nicht auf echter
+  Hardware durchlaufen worden.
 - Baudratenwechsel nach Sync (`FLASH_BAUD_RATE = 460800` in
   `flash_manager.c`) ist ein ueblicher Wert, nicht auf diesem Board/dieser
   USB-Bruecken-Kombination verifiziert - bei Problemen zunaechst auf

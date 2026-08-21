@@ -118,7 +118,7 @@ idf.py -p /dev/cu.usbXXXXX flash monitor
   http_server.c(.h)`, `components/modules/files/` fuer eine spaetere,
   gezielte Debugging-Session.
 
-## Phase 5 (Remote Access / USB-Flashing) - implementiert, NICHT hardware-verifiziert
+## Phase 5 (Remote Access / USB-Flashing) - implementiert, Boot+Wi-Fi-Reconnect hardware-verifiziert
 
 Vollstaendige Architektur fuer Remote-Zugriff + USB-Host-Flashing
 hinzugefuegt: `components/core/usb_host/` (usb_host_manager/
@@ -144,28 +144,41 @@ Testergebnisse):**
   der Aufgabenstellung geforderten REST-/WebSocket-Endpunkte, Pairing/
   Rate-Limiting, Flash-Zustandsautomat mit Fail-Safe-Verhalten, Settings-/
   Network-/System-Monitor-UI-Erweiterungen, PC-CLI und Web-Client.
-- **compile-tested**: **NEIN, fuer keine Zeile**. Diese Session hatte
-  keinen ESP-IDF-Toolchain-Zugriff und keinen Netzwerkzugriff auf die
-  ESP-Component-Registry (`components.espressif.com` war fuer diese
-  Session per Proxy-Policy blockiert) - `idf.py build` konnte zu keinem
-  Zeitpunkt ausgefuehrt werden. Der C-Code folgt den bestehenden
-  Projektkonventionen und dem dokumentierten Verhalten der verwendeten
-  ESP-IDF-/Espressif-Bibliotheken nach bestem Trainingswissen, ist aber
-  **nicht gegen echte Header kompiliert**.
-- **hardware-tested**: **NEIN**. Diese Session hatte keinen Zugriff auf
-  einen echten Tab5 oder ein Ziel-ESP-Board.
+- **compile-tested**: **JA**, seit Commit `c74bbb1` (mavemavericks,
+  2026-08-21). Der urspruengliche Entwicklungs-Agent hatte in seiner
+  Session weder ESP-IDF-Toolchain- noch Component-Registry-Zugriff
+  (`components.espressif.com` war per Proxy-Policy blockiert) und schrieb
+  `flash_target.c` daher nach bestem Trainingswissen gegen ein aelteres
+  esp-serial-flasher-Porting-Modell (globale `loader_port_*()`-Callbacks).
+  Der erste echte `idf.py build` deckte auf, dass die tatsaechlich
+  aufgeloeste Version (`espressif/esp-serial-flasher` 2.0.0, siehe
+  `dependencies.lock`) ein vtable-basiertes `esp_loader_port_ops_t`-Modell
+  mit Handle-Parameter nutzt - **die dokumentierte Unsicherheit in
+  `docs/remote_flashing.md`/`docs/usb_host.md` hat sich damit als
+  begruendet erwiesen**. `flash_target.c` wurde entsprechend portiert
+  (siehe Commit `c74bbb1`), ebenso ein `CONFIG_HTTPD_WS_SUPPORT`-Gap
+  zwischen `sdkconfig.defaults` und der eingecheckten `sdkconfig` sowie
+  ein `strcpy()`-Fehler in `settings_module_ui.c`.
+- **hardware-tested (Teilumfang)**: **JA** - Commits `c74bbb1`/`a9858bf`
+  (mavemavericks) verifizieren auf echtem Tab5: sauberer Build, stabiler
+  Boot ohne Crash, automatischer Wi-Fi-Reconnect nach Power-Cycle
+  (persistiertes STA-Profil via `esp_wifi`), Remote-Server startet
+  automatisch innerhalb ~9s nach IP-Bezug. **Noch nicht verifiziert**: ein
+  vollstaendiger Flash-Zyklus gegen ein angeschlossenes Ziel-ESP-Board
+  (USB-Geraeteerkennung, Bootloader-Sync, tatsaechliches Schreiben/
+  Verifizieren, Reset in die neue Firmware) sowie Pairing/Remote-API von
+  einem echten PC/Mac-Client aus - das vollstaendige Szenario aus
+  Abschnitt 33 der Aufgabenstellung steht weiterhin aus.
 - Python-CLI: Syntaxpruefung (`py_compile`) bestanden, **nicht** gegen ein
   echtes Geraet ausgefuehrt.
 - Web-Client: JavaScript-Syntaxpruefung (`node --check`) bestanden,
   **nicht** in einem echten Browser gegen ein echtes Geraet getestet.
 
-Vor dem ersten realen Einsatz: `idf.py build` lokal ausfuehren (loest auch
-die neuen `idf_component.yml`-Abhaengigkeiten - `espressif/usb_host_cdc_acm`,
-`espressif/esp-serial-flasher` - gegen die Registry auf und deckt
-Compile-Fehler auf), danach das komplette in Abschnitt 33 der
-Aufgabenstellung beschriebene End-to-End-Szenario auf echter Hardware
-durchgehen (mehrfach neu starten, nicht nur einmal flashen - siehe
-`docs/hardware_reference.md` zur Boot-Crash-Historie unten).
+Naechster Schritt: das vollstaendige End-to-End-Szenario aus Abschnitt 33
+der Aufgabenstellung (USB-Ziel anschliessen, pairen, flashen, Live-
+Progress, Serial-Ausgabe) auf echter Hardware durchgehen - mehrfach neu
+starten, nicht nur einmal flashen (siehe `docs/hardware_reference.md` zur
+Boot-Crash-Historie unten).
 
 CP210x/CH340/FTDI-USB-UART-Bruecken werden erkannt, aber bewusst als
 "nicht unterstuetzt" gemeldet statt eine ungetestete C++-Treiberintegration
