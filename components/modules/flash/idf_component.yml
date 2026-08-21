@@ -1,0 +1,9 @@
+dependencies:
+  idf: ">=5.3"
+  # esp-serial-flasher ist Espressifs offizielle Bibliothek fuer
+  # programmatisches Flashen von ESP-Chips ueber einen seriellen Bootloader-
+  # Kanal (component registry "espressif/esp-serial-flasher") - siehe
+  # docs/remote_flashing.md. Version NICHT gegen die Registry aufgeloest
+  # (kein Netzwerkzugriff in dieser Session) - vor dem ersten `idf.py build`
+  # mit Netzwerkzugriff pruefen/pinnen.
+  espressif/esp-serial-flasher: "^2.0.0"
