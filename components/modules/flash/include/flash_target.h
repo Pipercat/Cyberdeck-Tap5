@@ -62,7 +62,7 @@ esp_err_t flash_target_begin_region(uint32_t address, uint32_t total_size);
 // Bereichs. len darf variieren, muss aber in Summe genau total_size ergeben.
 esp_err_t flash_target_write_chunk(const uint8_t *data, size_t len);
 
-// Schliesst den aktuellen Bereich ab (MD5-Verify ueber esp_loader_flash_verify(),
+// Schliesst den aktuellen Bereich ab (MD5-Verify ueber esp_loader_flash_finish(),
 // sofern vom Ziel unterstuetzt).
 esp_err_t flash_target_end_region(void);
 

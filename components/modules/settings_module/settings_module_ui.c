@@ -10,6 +10,7 @@
 #include "lvgl.h"
 #include <stdio.h>
 #include <inttypes.h>
+#include <string.h>
 
 static lv_obj_t *s_backlight_slider = NULL;
 static lv_obj_t *s_backlight_value_label = NULL;
