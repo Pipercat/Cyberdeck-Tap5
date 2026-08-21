@@ -96,8 +96,10 @@ idf.py -p /dev/cu.usbXXXXX flash monitor
 - Display zeigt das Dashboard (Portrait, 720x1280) mit Statusleiste oben
   (Platzhalterwerte) und einem dynamischen Kachel-Grid, Backlight an (80%).
 - Touch auf GPIO/PWM/ADC/I2C Scanner/Serial/System/Audio/Network/Settings/
-  Sensors oeffnet das jeweils funktionsfaehige Modul; die restlichen Kacheln
-  (Flash, SPI, Camera, Files, Projects) zeigen weiterhin "Coming Soon".
+  Sensors/**Flash** oeffnet das jeweils funktionsfaehige Modul (Flash-Screen
+  siehe Phase 5 unten - **noch nicht hardware-verifiziert**); die
+  restlichen Kacheln (SPI, Camera, Files, Projects) zeigen weiterhin
+  "Coming Soon".
 
 **Bekannte offene Punkte:**
 - Geraete mit dem aelteren ILI9881C+GT911-Panel ("Gen1", vor ca. Oktober 2025)
@@ -116,12 +118,71 @@ idf.py -p /dev/cu.usbXXXXX flash monitor
   http_server.c(.h)`, `components/modules/files/` fuer eine spaetere,
   gezielte Debugging-Session.
 
+## Phase 5 (Remote Access / USB-Flashing) - implementiert, NICHT hardware-verifiziert
+
+Vollstaendige Architektur fuer Remote-Zugriff + USB-Host-Flashing
+hinzugefuegt: `components/core/usb_host/` (usb_host_manager/
+usb_device_manager/usb_serial, ueber ESP-IDFs `usb_host` +
+Espressifs `cdc_acm_host`), `components/modules/flash/` (flash_target ueber
+Espressifs `esp-serial-flasher`, flash_manager als Zustandsautomat mit
+eigenem FreeRTOS-Task, flash_ui als reale Bildschirm-Implementierung),
+`components/core/remote/` (authentifizierter REST+WebSocket-Server ueber
+`esp_http_server`, Pairing-Code/Bearer-Token-Auth, versioniertes JSON-
+Event-Protokoll), sowie `tools/cyberdeck-cli/` und `tools/cyberdeck-web/`
+als PC-seitige Clients.
+
+**Kein SPIFFS/VFS-Dateisystem in diesem Pfad** - Firmware wird in festen
+4-KB-Bloecken direkt vom PC gestreamt und sofort geschrieben, nie
+vollstaendig im RAM/Flash zwischengespeichert. Details, inklusive des
+inzwischen gefundenen und behobenen echten Root-Cause des frueheren
+Boot-Crashs (siehe unten), in `docs/remote_flashing.md`.
+
+**Ehrlicher Umsetzungsstand (Nutzervorgabe Abschnitt 46 - keine erfundenen
+Testergebnisse):**
+
+- **implemented**: die komplette oben beschriebene Architektur, alle in
+  der Aufgabenstellung geforderten REST-/WebSocket-Endpunkte, Pairing/
+  Rate-Limiting, Flash-Zustandsautomat mit Fail-Safe-Verhalten, Settings-/
+  Network-/System-Monitor-UI-Erweiterungen, PC-CLI und Web-Client.
+- **compile-tested**: **NEIN, fuer keine Zeile**. Diese Session hatte
+  keinen ESP-IDF-Toolchain-Zugriff und keinen Netzwerkzugriff auf die
+  ESP-Component-Registry (`components.espressif.com` war fuer diese
+  Session per Proxy-Policy blockiert) - `idf.py build` konnte zu keinem
+  Zeitpunkt ausgefuehrt werden. Der C-Code folgt den bestehenden
+  Projektkonventionen und dem dokumentierten Verhalten der verwendeten
+  ESP-IDF-/Espressif-Bibliotheken nach bestem Trainingswissen, ist aber
+  **nicht gegen echte Header kompiliert**.
+- **hardware-tested**: **NEIN**. Diese Session hatte keinen Zugriff auf
+  einen echten Tab5 oder ein Ziel-ESP-Board.
+- Python-CLI: Syntaxpruefung (`py_compile`) bestanden, **nicht** gegen ein
+  echtes Geraet ausgefuehrt.
+- Web-Client: JavaScript-Syntaxpruefung (`node --check`) bestanden,
+  **nicht** in einem echten Browser gegen ein echtes Geraet getestet.
+
+Vor dem ersten realen Einsatz: `idf.py build` lokal ausfuehren (loest auch
+die neuen `idf_component.yml`-Abhaengigkeiten - `espressif/usb_host_cdc_acm`,
+`espressif/esp-serial-flasher` - gegen die Registry auf und deckt
+Compile-Fehler auf), danach das komplette in Abschnitt 33 der
+Aufgabenstellung beschriebene End-to-End-Szenario auf echter Hardware
+durchgehen (mehrfach neu starten, nicht nur einmal flashen - siehe
+`docs/hardware_reference.md` zur Boot-Crash-Historie unten).
+
+CP210x/CH340/FTDI-USB-UART-Bruecken werden erkannt, aber bewusst als
+"nicht unterstuetzt" gemeldet statt eine ungetestete C++-Treiberintegration
+zu riskieren - siehe `docs/usb_host.md` fuer die Begruendung. mDNS
+(`cyberdeck.local`) wurde aus Vorsichtsgruenden zurueckgestellt, siehe
+`docs/remote_access.md`.
+
+Weitere Doku: `docs/remote_access.md`, `docs/remote_protocol.md`,
+`docs/usb_host.md`, `docs/remote_flashing.md`.
+
 ## Naechste Phasen
 
 Siehe Implementierungsplan (`/Users/marvin/.claude/plans/proud-hatching-spring.md`):
-Kamera (zurueckgestellt, siehe oben), esp_hosted/vfs-Bootcrash-Untersuchung
-(Voraussetzung fuer Server-API/File-Browser UND SD-Karte, siehe oben),
-Phase 5 (Flashing externer ESP32-Boards), Phase 6 (Projects/Testsequenzen/Diagnostics).
+Kamera (zurueckgestellt, siehe oben), Phase 5 Hardware-Verifikation (siehe
+oben - naechster zwingender Schritt vor jedem produktiven Einsatz),
+CP210x/CH340/FTDI-Treiber (C++-Bridge, siehe docs/usb_host.md), mDNS,
+Phase 6 (Projects/Testsequenzen/Diagnostics).
 
 ## Push-Test
 
