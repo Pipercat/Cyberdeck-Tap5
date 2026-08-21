@@ -180,6 +180,12 @@ static void restart_confirm_event_cb(lv_event_t *e)
     lv_msgbox_close(msgbox);
 }
 
+static void sensors_btn_cb(lv_event_t *e)
+{
+    (void)e;
+    nav_show(NAV_SCREEN_SENSORS);
+}
+
 static void restart_btn_cb(lv_event_t *e)
 {
     (void)e;
@@ -239,6 +245,11 @@ static lv_obj_t *system_screen_create(void)
     theme_apply_button(selftest_btn, THEME_BTN_NEUTRAL);
     lv_obj_add_event_cb(selftest_btn, selftest_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *st_l = lv_label_create(selftest_btn); lv_label_set_text(st_l, "Self Test");
+
+    lv_obj_t *sensors_btn = lv_btn_create(action_row);
+    theme_apply_button(sensors_btn, THEME_BTN_NEUTRAL);
+    lv_obj_add_event_cb(sensors_btn, sensors_btn_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *sensors_l = lv_label_create(sensors_btn); lv_label_set_text(sensors_l, "Sensors");
 
     lv_obj_t *restart_btn = lv_btn_create(action_row);
     theme_apply_button(restart_btn, THEME_BTN_DANGER);
