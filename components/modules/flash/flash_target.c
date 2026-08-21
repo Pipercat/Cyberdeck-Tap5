@@ -218,6 +218,18 @@ esp_err_t flash_target_reset_normal(void)
     return ESP_OK;
 }
 
+esp_err_t flash_target_enter_bootloader_only(void)
+{
+    if (!usb_serial_is_open()) {
+        esp_err_t err = usb_serial_open(115200);
+        if (err != ESP_OK) {
+            return err;
+        }
+    }
+    loader_port_enter_bootloader();
+    return ESP_OK;
+}
+
 void flash_target_disconnect(void)
 {
     s_connected = false;

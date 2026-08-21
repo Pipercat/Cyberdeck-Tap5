@@ -18,6 +18,9 @@ static void apply_defaults(settings_t *s)
     s->schema_version = SETTINGS_SCHEMA_VERSION;
     s->backlight_percent = 80;
     s->dark_mode = true;
+    s->remote_access_enabled = false;
+    s->remote_require_pairing = true;
+    strncpy(s->device_name, "CyberDeck-01", sizeof(s->device_name) - 1);
 }
 
 static esp_err_t load_from_nvs(void)

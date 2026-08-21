@@ -74,6 +74,14 @@ esp_err_t flash_target_finish(bool reboot);
 // ausserhalb eines Flash-Vorgangs nutzbar).
 esp_err_t flash_target_reset_normal(void);
 
+// Fuehrt nur die DTR/RTS-Bootloader-Einstiegssequenz aus, OHNE danach mit
+// esp_loader_connect() zu synchronisieren (fuer POST /device/bootloader -
+// Nutzeranforderung 15, "Bootloader-Modus steuern" als eigenstaendige
+// Aktion). Meldet ESP_ERR_TIMEOUT nicht - ob der Chip tatsaechlich im
+// Bootloader ist, wird hier bewusst NICHT behauptet (keine Sync-Pruefung),
+// da genau das den Unterschied zu flash_target_connect() ausmacht.
+esp_err_t flash_target_enter_bootloader_only(void);
+
 // Gibt die USB-Serial-Verbindung frei (Cleanup nach Fehler/Abbruch).
 void flash_target_disconnect(void);
 
