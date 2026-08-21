@@ -4,10 +4,12 @@
 #include "nav.h"
 #include "theme.h"
 #include "screen_header.h"
+#include "remote_server.h"
 #include "lvgl.h"
 #include <string.h>
 #include <stdio.h>
 
+static lv_obj_t *s_remote_status_label = NULL;
 static lv_obj_t *s_ssid_input = NULL;
 static lv_obj_t *s_pass_input = NULL;
 static lv_obj_t *s_keyboard = NULL;
@@ -92,10 +94,25 @@ static void refresh_scan_list(void)
 
 static bool s_was_scanning = false;
 
+static void refresh_remote_status_label(void)
+{
+    if (!remote_server_is_running()) {
+        lv_label_set_text(s_remote_status_label, "REMOTE ACCESS  ·  Stopped (siehe Settings)");
+        lv_obj_set_style_text_color(s_remote_status_label, THEME_COLOR_TEXT_DIM, 0);
+        return;
+    }
+    char ip[16] = "?";
+    wifi_module_get_ip_str(ip, sizeof(ip));
+    lv_label_set_text_fmt(s_remote_status_label, "REMOTE ACCESS  ·  Running  ·  %s:%d  ·  %u client(s)",
+                           ip, REMOTE_SERVER_PORT, (unsigned)remote_server_get_client_count());
+    lv_obj_set_style_text_color(s_remote_status_label, THEME_COLOR_SUCCESS, 0);
+}
+
 static void poll_timer_cb(lv_timer_t *timer)
 {
     (void)timer;
     refresh_status_label();
+    refresh_remote_status_label();
     bool scanning = wifi_module_is_scanning();
     if (s_was_scanning && !scanning) {
         refresh_scan_list();
@@ -181,6 +198,10 @@ static lv_obj_t *network_screen_create(void)
     s_status_label = lv_label_create(scr);
     lv_label_set_text(s_status_label, "Initialisiere Wi-Fi (ESP32-C6)...");
     lv_obj_set_style_text_color(s_status_label, THEME_COLOR_TEXT_DIM, 0);
+
+    s_remote_status_label = lv_label_create(scr);
+    lv_label_set_text(s_remote_status_label, "REMOTE ACCESS  ·  Stopped (siehe Settings)");
+    lv_obj_set_style_text_color(s_remote_status_label, THEME_COLOR_TEXT_DIM, 0);
 
     // --- SSID / Passwort ---
     lv_obj_t *form_row = lv_obj_create(scr);
@@ -269,6 +290,7 @@ static void network_on_show(void)
         lv_timer_resume(s_poll_timer);
     }
     refresh_status_label();
+    refresh_remote_status_label();
     refresh_scan_list();
 }
 

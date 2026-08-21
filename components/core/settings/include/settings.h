@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#define SETTINGS_SCHEMA_VERSION 1
+#define SETTINGS_SCHEMA_VERSION 2
 
 typedef struct {
     uint32_t schema_version;
@@ -27,6 +27,15 @@ typedef struct {
     // Zugangsdaten (Wi-Fi-Passwort, Server-Token) werden NICHT hier gespeichert,
     // sondern separat ueber die NVS-Verschluesselung (CONFIG_NVS_ENCRYPTION) in
     // einem eigenen, engeren Namespace - siehe settings_set_secret() (Phase 4).
+
+    // --- Remote Access (Phase 5, siehe components/core/remote/) ---
+    // Bewusst standardmaessig AUS (Nutzervorgabe Abschnitt 37: "Remote
+    // Access soll standardmaessig deaktivierbar sein"). Pairing-Codes und
+    // Client-Tokens selbst werden NICHT hier gespeichert - siehe
+    // remote_auth.h-Kommentar (nur RAM, nicht NVS-persistiert).
+    bool     remote_access_enabled;
+    bool     remote_require_pairing;
+    char     device_name[32];
 } settings_t;
 
 // Initialisiert NVS (falls noetig) und laedt die Settings. Muss vor jedem

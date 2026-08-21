@@ -4,12 +4,25 @@
 #include "nav.h"
 #include "theme.h"
 #include "bottom_nav.h"
+#include "remote_server.h"
+#include "remote_auth.h"
+#include "wifi_module.h"
 #include "lvgl.h"
 #include <stdio.h>
 #include <inttypes.h>
+#include <string.h>
 
 static lv_obj_t *s_backlight_slider = NULL;
 static lv_obj_t *s_backlight_value_label = NULL;
+
+static lv_obj_t *s_network_status_label = NULL;
+
+static lv_obj_t *s_remote_toggle = NULL;
+static lv_obj_t *s_pairing_toggle = NULL;
+static lv_obj_t *s_ip_label = NULL;
+static lv_obj_t *s_clients_label = NULL;
+static lv_obj_t *s_pair_code_label = NULL;
+static lv_timer_t *s_remote_refresh_timer = NULL;
 
 static void backlight_slider_cb(lv_event_t *e)
 {
@@ -34,6 +47,99 @@ static void reset_defaults_cb(lv_event_t *e)
     board_set_backlight(cfg->backlight_percent);
     lv_slider_set_value(s_backlight_slider, cfg->backlight_percent, LV_ANIM_ON);
     lv_label_set_text_fmt(s_backlight_value_label, "%u%%", cfg->backlight_percent);
+}
+
+static void configure_wifi_cb(lv_event_t *e)
+{
+    (void)e;
+    nav_show(NAV_SCREEN_NETWORK);
+}
+
+static void refresh_network_status_label(void)
+{
+    char buf[96];
+    switch (wifi_module_get_state()) {
+    case WIFI_MODULE_STATE_CONNECTED: {
+        char ip[16] = "?";
+        wifi_module_get_ip_str(ip, sizeof(ip));
+        snprintf(buf, sizeof(buf), LV_SYMBOL_WIFI " %s  ·  %s", wifi_module_get_connected_ssid(), ip);
+        lv_obj_set_style_text_color(s_network_status_label, THEME_COLOR_SUCCESS, 0);
+        break;
+    }
+    case WIFI_MODULE_STATE_CONNECTING:
+        snprintf(buf, sizeof(buf), "Verbinde mit %s...", wifi_module_get_connected_ssid());
+        lv_obj_set_style_text_color(s_network_status_label, THEME_COLOR_WARNING, 0);
+        break;
+    case WIFI_MODULE_STATE_FAILED:
+        snprintf(buf, sizeof(buf), "Verbindung fehlgeschlagen");
+        lv_obj_set_style_text_color(s_network_status_label, THEME_COLOR_DANGER, 0);
+        break;
+    default:
+        snprintf(buf, sizeof(buf), "Nicht verbunden");
+        lv_obj_set_style_text_color(s_network_status_label, THEME_COLOR_TEXT_DIM, 0);
+        break;
+    }
+    lv_label_set_text(s_network_status_label, buf);
+}
+
+static void remote_toggle_cb(lv_event_t *e)
+{
+    (void)e;
+    settings_t cfg = *settings_get();
+    cfg.remote_access_enabled = !cfg.remote_access_enabled;
+    settings_save(&cfg);
+    theme_set_toggle_active(s_remote_toggle, cfg.remote_access_enabled);
+    if (cfg.remote_access_enabled) {
+        remote_server_start();
+    } else {
+        remote_server_stop();
+    }
+}
+
+static void pairing_toggle_cb(lv_event_t *e)
+{
+    (void)e;
+    settings_t cfg = *settings_get();
+    cfg.remote_require_pairing = !cfg.remote_require_pairing;
+    settings_save(&cfg);
+    theme_set_toggle_active(s_pairing_toggle, cfg.remote_require_pairing);
+}
+
+static void show_pair_code_cb(lv_event_t *e)
+{
+    (void)e;
+    char code[REMOTE_AUTH_CODE_LEN + 1];
+    int valid_s = 0;
+    remote_auth_generate_code(code, &valid_s);
+    lv_label_set_text_fmt(s_pair_code_label, "%s  ·  %02d:%02d", code, valid_s / 60, valid_s % 60);
+}
+
+static void revoke_all_cb(lv_event_t *e)
+{
+    (void)e;
+    remote_auth_revoke_all();
+}
+
+static void remote_refresh_timer_cb(lv_timer_t *timer)
+{
+    (void)timer;
+    refresh_network_status_label();
+
+    char ip[16] = "--";
+    if (!wifi_module_get_ip_str(ip, sizeof(ip))) {
+        strcpy(ip, "--");
+    }
+    lv_label_set_text_fmt(s_ip_label, "%s%s", ip, remote_server_is_running() ? "  ·  Running" : "  ·  Stopped");
+
+    remote_auth_client_t clients[REMOTE_AUTH_MAX_CLIENTS];
+    size_t n = remote_auth_get_clients(clients, REMOTE_AUTH_MAX_CLIENTS);
+    lv_label_set_text_fmt(s_clients_label, "%u", (unsigned)n);
+
+    char code[REMOTE_AUTH_CODE_LEN + 1];
+    int remaining_s = 0;
+    if (remote_auth_get_active_code(code, &remaining_s)) {
+        lv_label_set_text_fmt(s_pair_code_label, "%s  ·  %02d:%02d", code, remaining_s / 60, remaining_s % 60);
+    }
 }
 
 static lv_obj_t *settings_screen_create(void)
@@ -96,10 +202,120 @@ static lv_obj_t *settings_screen_create(void)
     lv_obj_t *reset_l = lv_label_create(reset_btn);
     lv_label_set_text(reset_l, LV_SYMBOL_REFRESH " Zuruecksetzen");
 
+    // --- Network / Wi-Fi ---
+    lv_obj_t *net_card = lv_obj_create(scr);
+    theme_apply_card(net_card);
+    lv_obj_set_size(net_card, LV_PCT(100), LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(net_card, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_row(net_card, 8, 0);
+
+    lv_obj_t *net_title = lv_label_create(net_card);
+    lv_label_set_text(net_title, "NETWORK");
+    lv_obj_set_style_text_color(net_title, THEME_COLOR_TEXT_DIM, 0);
+
+    lv_obj_t *net_row = lv_obj_create(net_card);
+    lv_obj_remove_style_all(net_row);
+    lv_obj_set_size(net_row, LV_PCT(100), LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(net_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(net_row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    s_network_status_label = lv_label_create(net_row);
+    lv_label_set_text(s_network_status_label, "--");
+    lv_obj_t *net_btn = lv_btn_create(net_row);
+    theme_apply_button(net_btn, THEME_BTN_PRIMARY);
+    lv_obj_set_height(net_btn, THEME_TOUCH_TARGET_MIN);
+    lv_obj_add_event_cb(net_btn, configure_wifi_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *net_btn_l = lv_label_create(net_btn);
+    lv_label_set_text(net_btn_l, LV_SYMBOL_WIFI " Configure");
+
+    // --- Remote Access (Nutzeranforderung 16) ---
+    const settings_t *rcfg = settings_get();
+    lv_obj_t *remote_card = lv_obj_create(scr);
+    theme_apply_card(remote_card);
+    lv_obj_set_size(remote_card, LV_PCT(100), LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(remote_card, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_row(remote_card, 10, 0);
+
+    lv_obj_t *remote_title = lv_label_create(remote_card);
+    lv_label_set_text(remote_title, "REMOTE ACCESS");
+    lv_obj_set_style_text_color(remote_title, THEME_COLOR_TEXT_DIM, 0);
+
+    lv_obj_t *remote_row = lv_obj_create(remote_card);
+    lv_obj_remove_style_all(remote_row);
+    lv_obj_set_size(remote_row, LV_PCT(100), LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(remote_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(remote_row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_t *remote_label = lv_label_create(remote_row);
+    lv_label_set_text_fmt(remote_label, "%s", rcfg->device_name);
+    s_remote_toggle = lv_btn_create(remote_row);
+    theme_apply_toggle(s_remote_toggle, rcfg->remote_access_enabled);
+    lv_obj_add_event_cb(s_remote_toggle, remote_toggle_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *remote_toggle_l = lv_label_create(s_remote_toggle);
+    lv_label_set_text(remote_toggle_l, "ON");
+
+    s_ip_label = lv_label_create(remote_card);
+    lv_obj_set_style_text_color(s_ip_label, THEME_COLOR_TEXT_DIM, 0);
+    lv_label_set_text(s_ip_label, "--");
+
+    lv_obj_t *pairing_row = lv_obj_create(remote_card);
+    lv_obj_remove_style_all(pairing_row);
+    lv_obj_set_size(pairing_row, LV_PCT(100), LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(pairing_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(pairing_row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_t *pairing_label = lv_label_create(pairing_row);
+    lv_label_set_text(pairing_label, "Require Pairing");
+    s_pairing_toggle = lv_btn_create(pairing_row);
+    theme_apply_toggle(s_pairing_toggle, rcfg->remote_require_pairing);
+    lv_obj_add_event_cb(s_pairing_toggle, pairing_toggle_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *pairing_toggle_l = lv_label_create(s_pairing_toggle);
+    lv_label_set_text(pairing_toggle_l, "ON");
+
+    lv_obj_t *clients_row = lv_obj_create(remote_card);
+    lv_obj_remove_style_all(clients_row);
+    lv_obj_set_size(clients_row, LV_PCT(100), LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(clients_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(clients_row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_t *clients_label = lv_label_create(clients_row);
+    lv_label_set_text(clients_label, "Paired Clients");
+    s_clients_label = lv_label_create(clients_row);
+    lv_obj_set_style_text_color(s_clients_label, THEME_COLOR_ACCENT, 0);
+    lv_label_set_text(s_clients_label, "0");
+
+    s_pair_code_label = lv_label_create(remote_card);
+    theme_apply_title(s_pair_code_label);
+    lv_label_set_text(s_pair_code_label, "------");
+
+    lv_obj_t *pair_btn_row = lv_obj_create(remote_card);
+    lv_obj_remove_style_all(pair_btn_row);
+    lv_obj_set_size(pair_btn_row, LV_PCT(100), LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(pair_btn_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_style_pad_column(pair_btn_row, 8, 0);
+    lv_obj_t *pair_btn = lv_btn_create(pair_btn_row);
+    theme_apply_button(pair_btn, THEME_BTN_PRIMARY);
+    lv_obj_add_event_cb(pair_btn, show_pair_code_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *pair_l = lv_label_create(pair_btn);
+    lv_label_set_text(pair_l, "Show Pair Code");
+    lv_obj_t *revoke_btn = lv_btn_create(pair_btn_row);
+    theme_apply_button(revoke_btn, THEME_BTN_DANGER);
+    lv_obj_add_event_cb(revoke_btn, revoke_all_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *revoke_l = lv_label_create(revoke_btn);
+    lv_label_set_text(revoke_l, "Revoke All");
+
     return scr;
+}
+
+static void settings_on_show(void)
+{
+    remote_server_init();
+    if (s_remote_refresh_timer == NULL) {
+        s_remote_refresh_timer = lv_timer_create(remote_refresh_timer_cb, 1000, NULL);
+    } else {
+        lv_timer_resume(s_remote_refresh_timer);
+    }
+    remote_refresh_timer_cb(NULL);
 }
 
 void settings_module_ui_register(void)
 {
     nav_register(NAV_SCREEN_SETTINGS, settings_screen_create);
+    nav_register_on_show(NAV_SCREEN_SETTINGS, settings_on_show);
 }

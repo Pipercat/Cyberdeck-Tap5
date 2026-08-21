@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberDeck Remote</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>CYBERDECK REMOTE</h1>
+    <span id="onlineChip" class="chip neutral">OFFLINE</span>
+  </header>
+
+  <div class="status-line" id="statusLine">Not connected.</div>
+
+  <section class="card" id="connectCard">
+    <h2>Connect</h2>
+    <div class="row">
+      <input type="text" id="hostInput" placeholder="192.168.1.50" style="flex:1">
+      <button id="connectBtn">Connect</button>
+    </div>
+    <div class="row hidden" id="pairRow">
+      <input type="text" id="codeInput" placeholder="6-digit pair code" style="flex:1">
+      <button id="pairBtn">Pair</button>
+    </div>
+  </section>
+
+  <section class="card hidden" id="targetCard">
+    <h2>Target</h2>
+    <div class="row">
+      <span id="targetName">No target</span>
+      <span id="targetChip" class="chip neutral">--</span>
+    </div>
+    <div class="row" id="targetDetailRow"></div>
+    <div class="btn-row">
+      <button class="secondary" id="resetBtn">Reset</button>
+      <button class="secondary" id="bootloaderBtn">Bootloader</button>
+      <button class="secondary" id="serialBtn">Serial</button>
+    </div>
+  </section>
+
+  <section class="card hidden" id="flashCard">
+    <h2>Flash</h2>
+    <div class="row">
+      <span>ESP-IDF build directory</span>
+      <input type="file" id="buildDirInput" webkitdirectory directory multiple>
+    </div>
+    <div class="file-list" id="fileList"></div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="row">
+      <span id="progressLabel">Ready</span>
+      <span id="progressPct"></span>
+    </div>
+    <div class="btn-row">
+      <button id="flashBtn" disabled>Flash Device</button>
+      <button class="danger hidden" id="cancelBtn">Cancel</button>
+    </div>
+  </section>
+
+  <section class="card hidden" id="serialCard">
+    <h2>Serial Terminal</h2>
+    <div id="terminal"></div>
+    <div class="row">
+      <input type="text" id="serialInput" placeholder="Type and press Enter..." style="flex:1">
+      <button id="serialSendBtn">Send</button>
+    </div>
+    <div class="btn-row">
+      <button class="secondary" id="serialClearBtn">Clear</button>
+      <button class="secondary" id="serialCloseBtn">Close</button>
+    </div>
+  </section>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>

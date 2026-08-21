@@ -24,9 +24,17 @@ CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 
-# --- USB Host (fuer Flash-Tool ab Phase 5, hier bereits aktiviert
-#     damit die Partitions-/Speicherplanung von Anfang an stimmt) ---
+# --- USB Host (Phase 5: Remote-Flashing angeschlossener ESP-Boards, siehe
+#     components/core/usb_host/ + docs/usb_host.md) ---
 CONFIG_USB_HOST_CONTROL_TRANSFER_MAX_SIZE=1024
+
+# --- Remote-Server (Phase 5, siehe components/core/remote/ +
+#     docs/remote_access.md). WS_SUPPORT wird fuer /api/v1/ws und
+#     /api/v1/serial benoetigt (httpd_ws_frame_t/httpd_ws_recv_frame). Etwas
+#     mehr Sockets als der Default fuer REST + 2 WebSocket-Verbindungen +
+#     Spielraum fuer den bestehenden esp_hosted/Wi-Fi-Stack.
+CONFIG_HTTPD_WS_SUPPORT=y
+CONFIG_LWIP_MAX_SOCKETS=16
 
 # --- FreeRTOS: genug Headroom fuer LVGL + Modul-Tasks ---
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192

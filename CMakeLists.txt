@@ -7,10 +7,14 @@ set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/components/core/network"
     "${CMAKE_CURRENT_LIST_DIR}/components/core/settings"
     "${CMAKE_CURRENT_LIST_DIR}/components/core/diagnostics"
+    "${CMAKE_CURRENT_LIST_DIR}/components/core/usb_host"
+    "${CMAKE_CURRENT_LIST_DIR}/components/core/remote"
+    "${CMAKE_CURRENT_LIST_DIR}/components/core/storage"
     "${CMAKE_CURRENT_LIST_DIR}/components/ui/theme"
     "${CMAKE_CURRENT_LIST_DIR}/components/ui/widgets"
     "${CMAKE_CURRENT_LIST_DIR}/components/ui/nav"
     "${CMAKE_CURRENT_LIST_DIR}/components/modules/dashboard"
+    "${CMAKE_CURRENT_LIST_DIR}/components/modules/flash"
     "${CMAKE_CURRENT_LIST_DIR}/components/modules/gpio"
     "${CMAKE_CURRENT_LIST_DIR}/components/modules/pwm"
     "${CMAKE_CURRENT_LIST_DIR}/components/modules/adc"
@@ -21,6 +25,7 @@ set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/components/modules/network_tools"
     "${CMAKE_CURRENT_LIST_DIR}/components/modules/system"
     "${CMAKE_CURRENT_LIST_DIR}/components/modules/settings_module"
+    "${CMAKE_CURRENT_LIST_DIR}/components/modules/files"
 )
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)

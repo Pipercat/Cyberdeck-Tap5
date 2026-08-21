@@ -5,12 +5,16 @@
 #include "nav.h"
 #include "theme.h"
 #include "bottom_nav.h"
+#include "remote_server.h"
+#include "usb_device_manager.h"
+#include "flash_manager.h"
 #include "lvgl.h"
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
 
 static lv_obj_t *s_stats_label = NULL;
+static lv_obj_t *s_remote_stats_label = NULL;
 static lv_obj_t *s_modal = NULL;
 static lv_obj_t *s_modal_title = NULL;
 static lv_obj_t *s_modal_body = NULL;
@@ -64,6 +68,24 @@ static void refresh_timer_cb(lv_timer_t *timer)
         stats.flash_size_bytes / (1024 * 1024),
         temp_line, battery_line, up_h, up_m, up_sec,
         stats.idf_version, stats.project_version);
+
+    usb_device_manager_target_t target;
+    usb_device_manager_get_target(&target);
+    flash_status_t flash_status;
+    flash_manager_get_status(&flash_status);
+
+    lv_label_set_text_fmt(s_remote_stats_label,
+        "Remote Server:  %s  (%u client(s))\n"
+        "USB Host:       %s\n"
+        "USB Target:     %s\n"
+        "Flash Manager:  %s\n"
+        "Upload Buffer:  %d B (fixed, single-chunk rendezvous)",
+        remote_server_is_running() ? "Running" : "Stopped",
+        (unsigned)remote_server_get_client_count(),
+        target.connected ? "Device present" : "Idle",
+        target.connected ? target.product : "--",
+        flash_state_str(flash_status.state),
+        FLASH_CHUNK_MAX_LEN);
 }
 
 static void close_modal_cb(lv_event_t *e)
@@ -158,6 +180,12 @@ static void restart_confirm_event_cb(lv_event_t *e)
     lv_msgbox_close(msgbox);
 }
 
+static void sensors_btn_cb(lv_event_t *e)
+{
+    (void)e;
+    nav_show(NAV_SCREEN_SENSORS);
+}
+
 static void restart_btn_cb(lv_event_t *e)
 {
     (void)e;
@@ -194,6 +222,13 @@ static lv_obj_t *system_screen_create(void)
     lv_obj_set_style_text_color(s_stats_label, THEME_COLOR_TEXT, 0);
     lv_label_set_text(s_stats_label, "Lade...");
 
+    lv_obj_t *remote_card = lv_obj_create(scr);
+    theme_apply_card(remote_card);
+    lv_obj_set_size(remote_card, LV_PCT(100), LV_SIZE_CONTENT);
+    s_remote_stats_label = lv_label_create(remote_card);
+    lv_obj_set_style_text_color(s_remote_stats_label, THEME_COLOR_TEXT, 0);
+    lv_label_set_text(s_remote_stats_label, "Lade...");
+
     lv_obj_t *action_row = lv_obj_create(scr);
     lv_obj_remove_style_all(action_row);
     lv_obj_set_size(action_row, LV_PCT(100), LV_SIZE_CONTENT);
@@ -210,6 +245,11 @@ static lv_obj_t *system_screen_create(void)
     theme_apply_button(selftest_btn, THEME_BTN_NEUTRAL);
     lv_obj_add_event_cb(selftest_btn, selftest_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *st_l = lv_label_create(selftest_btn); lv_label_set_text(st_l, "Self Test");
+
+    lv_obj_t *sensors_btn = lv_btn_create(action_row);
+    theme_apply_button(sensors_btn, THEME_BTN_NEUTRAL);
+    lv_obj_add_event_cb(sensors_btn, sensors_btn_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *sensors_l = lv_label_create(sensors_btn); lv_label_set_text(sensors_l, "Sensors");
 
     lv_obj_t *restart_btn = lv_btn_create(action_row);
     theme_apply_button(restart_btn, THEME_BTN_DANGER);

@@ -1,0 +1,9 @@
+dependencies:
+  idf: ">=5.3"
+  # cdc_acm_host ist Espressifs offizielle CDC-ACM-Host-Klasse (esp-usb-Repo,
+  # component registry "espressif/usb_host_cdc_acm"). Version NICHT gegen die
+  # Registry aufgeloest (diese Session hat keinen Netzwerkzugriff auf
+  # components.espressif.com, siehe docs/usb_host.md) - vor dem ersten
+  # `idf.py build` mit Netzwerkzugriff pruefen/auf eine konkrete Version
+  # pinnen (`idf.py add-dependency "espressif/usb_host_cdc_acm^2"` o.ae.).
+  espressif/usb_host_cdc_acm: "^2.0.0"
